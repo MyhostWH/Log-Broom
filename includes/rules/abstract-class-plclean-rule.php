@@ -56,6 +56,56 @@ abstract class PLCLEAN_Rule {
 	abstract public function clean_batch( $limit );
 
 	/**
+	 * Rows left to delete right after clean_batch(), as reported by run_batch(). Rules whose count() is costly can
+	 * answer from what the batch found instead; the answer must be 0 only when nothing is left, and more than 0
+	 * whenever a further batch would delete something.
+	 *
+	 * @return int
+	 */
+	public function remaining_after_batch() {
+		return $this->count();
+	}
+
+	/**
+	 * Whether the last clean_batch() moved forward through the rule's tables without deleting anything, with more
+	 * still to read. run_batch() then reports progress instead of a stall.
+	 *
+	 * @return bool
+	 */
+	public function last_batch_progressed() {
+		return false;
+	}
+
+	/**
+	 * The count in parts, for rules whose entries are of two kinds (e.g. tasks and their log entries): an array of
+	 * non-negative ints whose sum is count(), or null when the rule has no parts.
+	 *
+	 * @return array|null
+	 */
+	public function count_parts() {
+		return null;
+	}
+
+	/**
+	 * Parts behind the last count the rule made (see count_parts()), or null.
+	 *
+	 * @return array|null
+	 */
+	public function last_count_parts() {
+		return null;
+	}
+
+	/**
+	 * What one batch counts: 'entries' (rows), or 'tasks' for rules whose batch size counts tasks that are deleted
+	 * together with their log entries.
+	 *
+	 * @return string
+	 */
+	public function batch_unit() {
+		return 'entries';
+	}
+
+	/**
 	 * Whether the rule cleans WordPress core data (not a plugin's tables).
 	 *
 	 * @return bool
@@ -135,6 +185,16 @@ abstract class PLCLEAN_Rule {
 	 * @return string
 	 */
 	public function details_note() {
+		return '';
+	}
+
+	/**
+	 * Translated note about the plugin's own (built-in) cleanup, shown in Details as a muted line (empty when
+	 * none). Informational only: it never changes what Log Broom deletes.
+	 *
+	 * @return string
+	 */
+	public function builtin_note() {
 		return '';
 	}
 

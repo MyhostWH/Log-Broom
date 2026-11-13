@@ -12,7 +12,6 @@ defined( 'ABSPATH' ) || exit;
 $plclean_available         = array();
 $plclean_missing           = array();
 $plclean_network_only      = array();
-$plclean_max_count         = 0;
 $plclean_has_plugin_source = false;
 foreach ( $data['sources'] as $plclean_source ) {
 	if ( $plclean_source['available'] ) {
@@ -20,7 +19,6 @@ foreach ( $data['sources'] as $plclean_source ) {
 		if ( ! $plclean_source['core'] ) {
 			$plclean_has_plugin_source = true;
 		}
-		$plclean_max_count = max( $plclean_max_count, $plclean_source['count'] );
 	} elseif ( ! empty( $plclean_source['network_only'] ) ) {
 		// Detected on this site, but only a network administrator may clean it.
 		$plclean_network_only[]    = $plclean_source;
@@ -32,7 +30,6 @@ foreach ( $data['sources'] as $plclean_source ) {
 $plclean_settings = $data['settings'];
 $plclean_schedule = $plclean_settings['schedule'];
 $plclean_last_run = $data['last_run'];
-$plclean_has_data = $data['totals']['count'] > 0;
 ?>
 <div class="wrap plclean-app no-js<?php echo 'off' === $plclean_schedule ? ' plclean-schedule-off' : ''; ?>" id="plclean-app">
 	<h1><?php esc_html_e( 'Log Broom', 'log-broom' ); ?></h1>
@@ -50,22 +47,16 @@ $plclean_has_data = $data['totals']['count'] > 0;
 		</p>
 	</div>
 
-	<section class="plclean-summary" id="plclean-summary" data-count="<?php echo esc_attr( $data['totals']['count'] ); ?>" data-size="<?php echo esc_attr( $data['totals']['size'] ); ?>">
+	<?php
+	// Counts and sizes are filled in by the script, one source at a time, once the page is open. The script also
+	// sets aria-busy while it counts, so a page without JavaScript is never announced as busy.
+	?>
+	<section class="plclean-summary" id="plclean-summary">
 		<p class="plclean-summary-size">
-			<?php
-			if ( '' !== $data['totals']['size_human'] ) {
-				/* translators: %s: data size, e.g. "1.4 GB". */
-				echo wp_kses( sprintf( __( '%s of log data found', 'log-broom' ), '<strong class="plclean-summary-size-value">' . esc_html( $data['totals']['size_human'] ) . '</strong>' ), array( 'strong' => array( 'class' => array() ) ) );
-			} else {
-				echo '<strong>' . esc_html__( 'Log data', 'log-broom' ) . '</strong>';
-			}
-			?>
+			<strong><?php esc_html_e( 'Log data', 'log-broom' ); ?></strong>
 		</p>
-		<p class="plclean-summary-count">
-			<?php
-			/* translators: %s: number of entries. */
-			echo wp_kses( sprintf( _n( '%s entry', '%s entries', $data['totals']['count'], 'log-broom' ), '<strong class="plclean-summary-count-value">' . esc_html( number_format_i18n( $data['totals']['count'] ) ) . '</strong>' ), array( 'strong' => array( 'class' => array() ) ) );
-			?>
+		<p class="plclean-summary-count plclean-js-only">
+			<strong class="plclean-summary-count-value"><?php esc_html_e( 'Counting…', 'log-broom' ); ?></strong>
 		</p>
 		<p class="plclean-summary-sources">
 			<?php
@@ -73,46 +64,36 @@ $plclean_has_data = $data['totals']['count'] > 0;
 			echo wp_kses( sprintf( _n( '%s source', '%s sources', count( $plclean_available ), 'log-broom' ), '<strong>' . esc_html( number_format_i18n( count( $plclean_available ) ) ) . '</strong>' ), array( 'strong' => array() ) );
 			?>
 		</p>
+		<p class="plclean-no-js-only plclean-no-js-note" id="plclean-no-js-note"><?php esc_html_e( 'JavaScript is needed to see how much each source holds and to clean it.', 'log-broom' ); ?></p>
 	</section>
-
-	<?php if ( ! $plclean_has_data ) : ?>
-		<p class="plclean-empty" id="plclean-empty">
-			<span class="dashicons dashicons-yes-alt" aria-hidden="true"></span>
-			<?php esc_html_e( 'Your database is tidy. None of the supported sources have anything to clean right now.', 'log-broom' ); ?>
-		</p>
-	<?php endif; ?>
 
 	<form id="plclean-form" method="post" action="" onsubmit="return false;">
 		<h2 class="screen-reader-text"><?php esc_html_e( 'Sources', 'log-broom' ); ?></h2>
 		<div class="plclean-cards" id="plclean-cards">
 			<?php
 			foreach ( $plclean_available as $plclean_source ) :
-				$plclean_pct     = PLCLEAN_Admin::bar_percent( $plclean_source['count'], $plclean_max_count );
-				$plclean_clean   = 0 === $plclean_source['count'];
 				$plclean_enabled = in_array( $plclean_source['id'], $plclean_settings['enabled_rules'], true );
 				?>
-				<div class="plclean-source<?php echo $plclean_clean ? ' is-clean' : ''; ?>" data-rule="<?php echo esc_attr( $plclean_source['id'] ); ?>">
-					<label class="plclean-card" data-rule="<?php echo esc_attr( $plclean_source['id'] ); ?>" data-count="<?php echo esc_attr( $plclean_source['count'] ); ?>" data-size="<?php echo esc_attr( $plclean_source['size'] ); ?>">
-						<input type="checkbox" class="plclean-card-select" name="rules[]" value="<?php echo esc_attr( $plclean_source['id'] ); ?>"<?php disabled( 0, $plclean_source['count'] ); ?> />
+				<div class="plclean-source is-counting" data-rule="<?php echo esc_attr( $plclean_source['id'] ); ?>">
+					<label class="plclean-card" data-rule="<?php echo esc_attr( $plclean_source['id'] ); ?>">
+						<input type="checkbox" class="plclean-card-select" name="rules[]" value="<?php echo esc_attr( $plclean_source['id'] ); ?>" disabled />
 						<span class="plclean-card-body">
 							<span class="plclean-card-title" id="<?php echo esc_attr( 'plclean-title-' . $plclean_source['id'] ); ?>"><?php echo esc_html( $plclean_source['label'] ); ?></span>
 							<span class="plclean-card-desc"><?php echo esc_html( $plclean_source['description'] ); ?></span>
 						</span>
 						<span class="plclean-card-stats">
-							<span class="plclean-card-count"><?php echo esc_html( number_format_i18n( $plclean_source['count'] ) ); ?></span>
-							<?php if ( ! $plclean_clean ) : ?>
-								<span class="plclean-card-size"><?php echo esc_html( '' !== $plclean_source['size_human'] ? $plclean_source['size_human'] : '—' ); ?></span>
-							<?php endif; ?>
+							<span class="plclean-card-count plclean-js-only"><?php esc_html_e( 'Counting…', 'log-broom' ); ?></span>
+							<span class="plclean-card-size"></span>
 							<span class="plclean-card-clean"><?php esc_html_e( 'Nothing to clean', 'log-broom' ); ?></span>
 						</span>
-						<span class="plclean-bar" aria-hidden="true"><span class="plclean-bar-fill" style="width: <?php echo esc_attr( $plclean_pct ); ?>%"></span></span>
+						<span class="plclean-bar" aria-hidden="true"><span class="plclean-bar-fill" style="width: 0%"></span></span>
 					</label>
 					<div class="plclean-card-actions plclean-js-only">
 						<label class="plclean-switch">
 							<input type="checkbox" class="plclean-auto-toggle" name="enabled_rules[]" value="<?php echo esc_attr( $plclean_source['id'] ); ?>"<?php checked( $plclean_enabled ); ?> />
 							<span><?php esc_html_e( 'Include in automatic cleaning', 'log-broom' ); ?></span>
 						</label>
-						<button type="button" class="button plclean-clean-one" data-rule="<?php echo esc_attr( $plclean_source['id'] ); ?>" aria-describedby="<?php echo esc_attr( 'plclean-title-' . $plclean_source['id'] ); ?>"<?php disabled( 0, $plclean_source['count'] ); ?>>
+						<button type="button" class="button plclean-clean-one" data-rule="<?php echo esc_attr( $plclean_source['id'] ); ?>" aria-describedby="<?php echo esc_attr( 'plclean-title-' . $plclean_source['id'] ); ?>" disabled>
 							<span class="dashicons dashicons-trash" aria-hidden="true"></span>
 							<span class="plclean-button-label"><?php esc_html_e( 'Clean…', 'log-broom' ); ?></span>
 						</button>
@@ -126,18 +107,16 @@ $plclean_has_data = $data['totals']['count'] > 0;
 							<div class="plclean-details-section">
 								<h3 class="plclean-details-heading"><?php esc_html_e( 'Database tables', 'log-broom' ); ?></h3>
 								<ul class="plclean-tables">
-									<?php if ( ! empty( array_filter( wp_list_pluck( $plclean_source['tables'], 'size_human' ) ) ) ) : ?>
-										<li class="plclean-tables-head">
-											<span><?php esc_html_e( 'Table', 'log-broom' ); ?></span>
-											<span><?php esc_html_e( 'Size on disk', 'log-broom' ); ?></span>
-										</li>
-									<?php endif; ?>
+									<?php
+									// The script adds the "Size on disk" column (sizes of the plugin's own tables) once the source is counted.
+									?>
+									<li class="plclean-tables-head" hidden>
+										<span><?php esc_html_e( 'Table', 'log-broom' ); ?></span>
+										<span><?php esc_html_e( 'Size on disk', 'log-broom' ); ?></span>
+									</li>
 									<?php foreach ( $plclean_source['tables'] as $plclean_table ) : ?>
-										<li>
+										<li class="plclean-table" data-table="<?php echo esc_attr( $plclean_table['name'] ); ?>">
 											<code><?php echo esc_html( $plclean_table['name'] ); ?></code>
-											<?php if ( '' !== $plclean_table['size_human'] ) : ?>
-												<span class="plclean-table-size"><?php echo esc_html( $plclean_table['size_human'] ); ?></span>
-											<?php endif; ?>
 										</li>
 									<?php endforeach; ?>
 								</ul>
@@ -151,6 +130,9 @@ $plclean_has_data = $data['totals']['count'] > 0;
 								<p><?php echo esc_html( $plclean_source['description'] ); ?></p>
 								<?php if ( '' !== $plclean_source['details_note'] ) : ?>
 									<p class="plclean-details-note plclean-deleted-note"><?php echo esc_html( $plclean_source['details_note'] ); ?></p>
+								<?php endif; ?>
+								<?php if ( '' !== $plclean_source['builtin_note'] ) : ?>
+									<p class="plclean-details-note plclean-builtin-note"><?php echo esc_html( $plclean_source['builtin_note'] ); ?></p>
 								<?php endif; ?>
 							</div>
 							<?php if ( '' !== $plclean_source['kept'] ) : ?>

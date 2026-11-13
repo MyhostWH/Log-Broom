@@ -3,7 +3,7 @@
  * Removes the plugin's options and scheduled events when it is deleted from the Plugins screen.
  *
  * Runs without the plugin loaded, so the names are literals (kept in sync with PLCLEAN_Settings,
- * PLCLEAN_Cleaner and PLCLEAN_Scheduler). Cleaned log data is never restored and no other data is touched.
+ * PLCLEAN_Cleaner, PLCLEAN_Scheduler and PLCLEAN_Rule_Action_Scheduler). Cleaned log data is never restored and no other data is touched.
  *
  * @package Log_Broom
  */
@@ -19,6 +19,8 @@ function plclean_uninstall_site() {
 	delete_option( 'plclean_pending_optimize' );
 	delete_option( 'plclean_run_deleted' );
 	delete_option( 'plclean_last_error' );
+	delete_option( 'plclean_idle_batches' );
+	delete_transient( 'plclean_as_scan' );
 	wp_clear_scheduled_hook( 'plclean_scheduled_clean' );
 	wp_clear_scheduled_hook( 'plclean_scheduled_clean_continue' );
 }

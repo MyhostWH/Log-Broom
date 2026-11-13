@@ -40,6 +40,15 @@ class PLCLEAN_Rule_WP_Mail_SMTP extends PLCLEAN_Rule_Table {
 	}
 
 	/**
+	 * What the plugin cleans by itself (shown in Details).
+	 *
+	 * @return string
+	 */
+	public function builtin_note() {
+		return __( 'Cleaning also resets WP Mail SMTP\'s recent email-error count on its dashboard.', 'log-broom' );
+	}
+
+	/**
 	 * What is kept.
 	 *
 	 * @return string

@@ -34,6 +34,20 @@ class PLCLEAN_Cleaner {
 	const SLOW_BATCH = 3.0;
 
 	/**
+	 * Option counting, per rule, the batches in a row that deleted nothing but reported progress (a scan moving
+	 * forward). Kept in an option, not in memory or a transient, so it counts across AJAX requests and
+	 * continuation events even when an object cache drops transients.
+	 */
+	const IDLE_OPTION = 'plclean_idle_batches';
+
+	/**
+	 * Batches in a row that delete nothing before a run is stopped as stalled, even if they report progress.
+	 * Each idle batch scans one 250,000-id window, so 400 covers a full pass over about 100 million ids
+	 * (actions plus logs) while still ending a run whose scan position is lost on every request.
+	 */
+	const MAX_IDLE_BATCHES = 400;
+
+	/**
 	 * Current time in seconds (filterable so tests can control it).
 	 *
 	 * @return float
@@ -61,7 +75,9 @@ class PLCLEAN_Cleaner {
 	 *                            with clamp_limit() first.
 	 * @return array array( 'deleted' => int, 'remaining' => int, 'done' => bool, 'stalled' => bool,
 	 *               'elapsed' => float, 'limit' => int, 'tables_touched' => string[] ), plus
-	 *               'error' => string on a database error.
+	 *               'error' => string on a database error, 'parts' => int[] for rules that count in parts, and
+	 *               'stall_reason' => string (plain text) when the run was stopped after too many batches in a
+	 *               row that deleted nothing.
 	 */
 	public function run_batch( PLCLEAN_Rule $rule, $limit = null ) {
 		$limit = null === $limit ? (int) $rule->batch_size() : max( 1, (int) $limit );
@@ -98,10 +114,22 @@ class PLCLEAN_Cleaner {
 		}
 
 		$deleted   = (int) $deleted;
-		$remaining = (int) $rule->count();
-		$stalled   = 0 === $deleted && $remaining > 0;
+		$remaining = (int) $rule->remaining_after_batch();
+		// A batch that deleted nothing while rows remain is a stall, unless it moved a scan forward.
+		$stalled = 0 === $deleted && $remaining > 0 && ! $rule->last_batch_progressed();
+		$reason  = '';
+		if ( self::idle_limit_reached( $rule, 0 === $deleted && $remaining > 0 && ! $stalled ) ) {
+			// Progress that never deletes anything (for example a scan position the object cache keeps losing) must
+			// still end.
+			$stalled = true;
+			$reason  = sprintf(
+				/* translators: %s: number of batches. */
+				__( 'Stopped after %s batches in a row that removed nothing. Try again later.', 'log-broom' ),
+				number_format_i18n( self::max_idle_batches() )
+			);
+		}
 
-		return array(
+		$result = array(
 			'deleted'        => $deleted,
 			'remaining'      => $remaining,
 			'done'           => 0 === $remaining || $stalled,
@@ -110,6 +138,69 @@ class PLCLEAN_Cleaner {
 			'limit'          => $limit,
 			'tables_touched' => self::tables_touched( $rule, $deleted ),
 		);
+		$parts  = $rule->last_count_parts();
+		if ( is_array( $parts ) ) {
+			$result['parts'] = array_map( 'intval', $parts );
+		}
+		if ( '' !== $reason ) {
+			$result['stall_reason'] = $reason;
+		}
+		return $result;
+	}
+
+	/**
+	 * Largest number of batches in a row that may delete nothing (filterable, at least 1).
+	 *
+	 * @return int
+	 */
+	private static function max_idle_batches() {
+		/**
+		 * Filters how many batches in a row may delete nothing before a run is stopped as stalled.
+		 *
+		 * @param int $max Batches, default 50.
+		 */
+		return max( 1, (int) apply_filters( 'plclean_max_idle_batches', self::MAX_IDLE_BATCHES ) );
+	}
+
+	/**
+	 * Count a batch that deleted nothing but reported progress; any other batch resets the count.
+	 *
+	 * @param PLCLEAN_Rule $rule Rule.
+	 * @param bool         $idle Whether the batch was idle (deleted nothing, rows remain, not stalled).
+	 * @return bool True when the limit is reached (the count is then reset).
+	 */
+	private static function idle_limit_reached( PLCLEAN_Rule $rule, $idle ) {
+		$counts = get_option( self::IDLE_OPTION, array() );
+		$counts = is_array( $counts ) ? $counts : array();
+		$id     = $rule->id();
+		if ( ! $idle ) {
+			if ( isset( $counts[ $id ] ) ) {
+				unset( $counts[ $id ] );
+				self::save_idle_counts( $counts );
+			}
+			return false;
+		}
+		$counts[ $id ] = ( isset( $counts[ $id ] ) ? absint( $counts[ $id ] ) : 0 ) + 1;
+		$reached       = $counts[ $id ] >= self::max_idle_batches();
+		if ( $reached ) {
+			unset( $counts[ $id ] );
+		}
+		self::save_idle_counts( $counts );
+		return $reached;
+	}
+
+	/**
+	 * Store the idle batch counts (the option is removed when empty).
+	 *
+	 * @param array $counts Counts by rule id.
+	 * @return void
+	 */
+	private static function save_idle_counts( array $counts ) {
+		if ( array() === $counts ) {
+			delete_option( self::IDLE_OPTION );
+		} else {
+			update_option( self::IDLE_OPTION, $counts, false );
+		}
 	}
 
 	/**
@@ -169,7 +260,8 @@ class PLCLEAN_Cleaner {
 
 	/**
 	 * Automatic batch sizing: double after a full batch that took under a second (up to $max), halve after a
-	 * batch that took over three seconds (down to 1000), otherwise keep the size.
+	 * batch that took over three seconds (down to 1000), otherwise keep the size. A batch is full when it deleted
+	 * at least $limit rows: Action Scheduler batches count actions and also delete their log entries.
 	 *
 	 * @param int   $limit   Limit used for the last batch.
 	 * @param int   $deleted Rows the last batch deleted.
@@ -179,7 +271,7 @@ class PLCLEAN_Cleaner {
 	 */
 	public static function next_limit( $limit, $deleted, $elapsed, $max ) {
 		$limit = (int) $limit;
-		if ( $elapsed < self::FAST_BATCH && (int) $deleted === $limit ) {
+		if ( $elapsed < self::FAST_BATCH && (int) $deleted >= $limit ) {
 			return min( (int) $max, $limit * 2 );
 		}
 		if ( $elapsed > self::SLOW_BATCH ) {

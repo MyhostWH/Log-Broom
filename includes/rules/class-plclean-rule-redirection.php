@@ -40,6 +40,15 @@ class PLCLEAN_Rule_Redirection extends PLCLEAN_Rule_Table {
 	}
 
 	/**
+	 * What the plugin cleans by itself (shown in Details).
+	 *
+	 * @return string
+	 */
+	public function builtin_note() {
+		return __( 'Redirection can expire logs itself.', 'log-broom' );
+	}
+
+	/**
 	 * What is kept.
 	 *
 	 * @return string

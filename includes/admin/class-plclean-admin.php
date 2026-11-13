@@ -24,7 +24,7 @@ class PLCLEAN_Admin {
 	private $hook_suffix = '';
 
 	/**
-	 * View data computed once per request (counts and sizes are expensive).
+	 * View data computed once per request.
 	 *
 	 * @var array|null
 	 */
@@ -38,6 +38,7 @@ class PLCLEAN_Admin {
 	public function register() {
 		add_action( 'admin_menu', array( $this, 'add_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
+		add_action( 'wp_ajax_plclean_stats', array( $this, 'ajax_stats' ) );
 		add_action( 'wp_ajax_plclean_clean', array( $this, 'ajax_clean' ) );
 		add_action( 'wp_ajax_plclean_optimize', array( $this, 'ajax_optimize' ) );
 		add_action( 'wp_ajax_plclean_save_settings', array( $this, 'ajax_save_settings' ) );
@@ -135,7 +136,6 @@ class PLCLEAN_Admin {
 			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 			'nonce'   => wp_create_nonce( self::NONCE ),
 			'sources' => $data['sources'],
-			'totals'  => $data['totals'],
 			'lastRun' => $last_run,
 			'batch'   => array(
 				'mode' => $data['settings']['batch_mode'],
@@ -171,8 +171,12 @@ class PLCLEAN_Admin {
 	/**
 	 * Data shared by the view and the script. Computed once per request.
 	 *
+	 * Only cheap facts are read here (labels, availability, table names, settings), so the page opens at once on
+	 * any site. Counts and sizes are unknown (null) until the script asks for them, one source at a time
+	 * (plclean_stats, see stats()).
+	 *
 	 * Network-wide rules a non-network administrator may not clean are reported as unavailable with
-	 * 'network_only' set, and are neither counted nor sized.
+	 * 'network_only' set.
 	 *
 	 * @return array
 	 */
@@ -182,23 +186,17 @@ class PLCLEAN_Admin {
 		}
 
 		$sources = array();
-		$count   = 0;
-		$size    = 0;
-
 		foreach ( PLCLEAN_Registry::all() as $rule ) {
 			$available    = (bool) $rule->is_available();
 			$network_only = $available && self::is_network_locked( $rule );
 			$available    = $available && ! $network_only;
-			$rule_n       = $available ? (int) $rule->count() : 0;
-			$rule_size    = $available ? (int) $rule->size() : 0;
 			$tables       = array();
 			if ( $available ) {
-				foreach ( $rule->table_details() as $table ) {
-					$table_size = null === $table['size'] ? null : (int) $table['size'];
-					$tables[]   = array(
-						'name'       => (string) $table['name'],
-						'size'       => $table_size,
-						'size_human' => null !== $table_size && $table_size > 0 ? size_format( $table_size ) : '',
+				foreach ( $rule->tables() as $table ) {
+					$tables[] = array(
+						'name'       => (string) $table,
+						'size'       => null,
+						'size_human' => '',
 					);
 				}
 			}
@@ -208,15 +206,17 @@ class PLCLEAN_Admin {
 				'label'          => $rule->label(),
 				'description'    => $rule->description(),
 				'details_note'   => $rule->details_note(),
+				'builtin_note'   => $rule->builtin_note(),
 				'kept'           => $rule->kept(),
 				'core'           => $rule->is_core(),
-				'count'          => $rule_n,
-				'size'           => $rule_size,
-				'size_human'     => $rule_size > 0 ? size_format( $rule_size ) : '',
+				'count'          => null,
+				'size'           => null,
+				'size_human'     => '',
 				'available'      => $available,
 				'network_only'   => $network_only,
 				'tables'         => $tables,
 				'adaptive'       => PLCLEAN_Cleaner::is_adjustable( $rule ),
+				'batch_unit'     => 'tasks' === $rule->batch_unit() ? 'tasks' : 'entries',
 				// Single-pass rules (expired transients) have no batch size worth showing: 0.
 				'batch_size'     => $rule->batch_size() < PHP_INT_MAX ? (int) $rule->batch_size() : 0,
 				// Automatic sizing grows up to this; a fixed size may be larger (the server clamps it).
@@ -224,25 +224,48 @@ class PLCLEAN_Admin {
 				'tables_note'    => $available ? $rule->tables_note() : '',
 				'cleaned_note'   => $available ? $rule->cleaned_note() : '',
 			);
-			// Totals describe what is left to clean: an emptied table keeps its disk space until optimized.
-			if ( $rule_n > 0 ) {
-				$count += $rule_n;
-				$size  += $rule_size;
-			}
 		}
 
 		$this->view_data = array(
 			'sources'    => $sources,
-			'totals'     => array(
-				'count'      => $count,
-				'size'       => $size,
-				'size_human' => $size > 0 ? size_format( $size ) : '',
-			),
 			'settings'   => PLCLEAN_Settings::get(),
 			'last_run'   => PLCLEAN_Settings::get_last_run(),
 			'last_error' => PLCLEAN_Scheduler::get_last_error(),
 		);
 		return $this->view_data;
+	}
+
+	/**
+	 * Count and size of one source: what plclean_stats returns.
+	 *
+	 * @param PLCLEAN_Rule $rule Rule.
+	 * @return array array( 'count' => int, 'size' => int, 'size_human' => string, 'tables' => array[] ), where each
+	 *               table is array( 'name' => string, 'size' => int|null, 'size_human' => string ); plus
+	 *               'parts' => int[] (e.g. array( 'tasks' => n, 'logs' => n )) for rules that count in parts.
+	 */
+	public static function stats( PLCLEAN_Rule $rule ) {
+		$parts  = $rule->count_parts();
+		$count  = is_array( $parts ) ? (int) array_sum( $parts ) : (int) $rule->count();
+		$size   = (int) $rule->size();
+		$tables = array();
+		foreach ( $rule->table_details() as $table ) {
+			$table_size = null === $table['size'] ? null : (int) $table['size'];
+			$tables[]   = array(
+				'name'       => (string) $table['name'],
+				'size'       => $table_size,
+				'size_human' => null !== $table_size && $table_size > 0 ? size_format( $table_size ) : '',
+			);
+		}
+		$out = array(
+			'count'      => $count,
+			'size'       => $size,
+			'size_human' => $size > 0 ? size_format( $size ) : '',
+			'tables'     => $tables,
+		);
+		if ( is_array( $parts ) ) {
+			$out['parts'] = array_map( 'intval', $parts );
+		}
+		return $out;
 	}
 
 	/**
@@ -308,6 +331,17 @@ class PLCLEAN_Admin {
 			);
 		}
 		return $rule;
+	}
+
+	/**
+	 * AJAX: count and size of one source (the page asks for each source after it opens).
+	 *
+	 * @return void
+	 */
+	public function ajax_stats() {
+		$this->guard();
+		$rule = $this->posted_rule();
+		wp_send_json_success( self::stats( $rule ) );
 	}
 
 	/**

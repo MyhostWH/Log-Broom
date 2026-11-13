@@ -9,16 +9,16 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-13T13:55:15+00:00\n"
+"POT-Creation-Date: 2026-11-13T16:59:03+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: log-broom\n"
 
 #. Plugin Name of the plugin
 #: log-broom.php
-#: includes/admin/class-plclean-admin.php:53
 #: includes/admin/class-plclean-admin.php:54
-#: includes/admin/views/page.php:38
+#: includes/admin/class-plclean-admin.php:55
+#: includes/admin/views/page.php:35
 msgid "Log Broom"
 msgstr ""
 
@@ -37,242 +37,254 @@ msgstr ""
 msgid "https://myhost.co.il/"
 msgstr ""
 
-#: includes/admin/class-plclean-admin.php:97
+#: includes/admin/class-plclean-admin.php:98
 msgid "Only a network administrator can clean network-wide logs."
 msgstr ""
 
-#: includes/admin/class-plclean-admin.php:253
+#: includes/admin/class-plclean-admin.php:278
 msgid "You do not have permission to access this page."
 msgstr ""
 
-#: includes/admin/class-plclean-admin.php:267
+#: includes/admin/class-plclean-admin.php:292
 msgid "You do not have permission to do this."
 msgstr ""
 
-#: includes/admin/class-plclean-admin.php:284
+#: includes/admin/class-plclean-admin.php:309
 msgid "Unknown source."
 msgstr ""
 
-#: includes/admin/class-plclean-admin.php:293
+#: includes/admin/class-plclean-admin.php:318
 msgid "This source was not found on this site."
 msgstr ""
 
-#: includes/admin/class-plclean-admin.php:324
+#: includes/admin/class-plclean-admin.php:360
 msgid "Please confirm you have a database backup before cleaning."
 msgstr ""
 
-#: includes/admin/class-plclean-admin.php:381
+#. translators: %s: error message from the database.
+#: includes/admin/class-plclean-admin.php:373
+#, php-format
+msgid "The database refused to delete entries: %s"
+msgstr ""
+
+#: includes/admin/class-plclean-admin.php:441
 msgid "Please confirm you have regular automatic backups before turning on automatic cleaning."
 msgstr ""
 
-#: includes/admin/views/page.php:43
+#: includes/admin/views/page.php:40
 msgid "Back up your database first."
 msgstr ""
 
-#: includes/admin/views/page.php:44
+#: includes/admin/views/page.php:41
 msgid "Cleaning permanently deletes data and can't be undone."
 msgstr ""
 
-#: includes/admin/views/page.php:46
+#: includes/admin/views/page.php:43
 msgid "How to back up WordPress"
 msgstr ""
 
-#: includes/admin/views/page.php:47
+#: includes/admin/views/page.php:44
 msgid "(opens in a new tab)"
 msgstr ""
 
-#. translators: %s: data size, e.g. "1.4 GB".
-#: includes/admin/views/page.php:58
-#, php-format
-msgid "%s of log data found"
-msgstr ""
-
-#: includes/admin/views/page.php:60
-#: assets/js/admin.js:421
+#: includes/admin/views/page.php:56
+#: assets/js/admin.js:474
 msgid "Log data"
 msgstr ""
 
-#. translators: %s: number of entries.
-#: includes/admin/views/page.php:67
-#: assets/js/admin.js:394
-#, php-format,js-format
-msgid "%s entry"
-msgid_plural "%s entries"
-msgstr[0] ""
-msgstr[1] ""
+#: includes/admin/views/page.php:59
+#: includes/admin/views/page.php:85
+#: assets/js/admin.js:567
+msgid "Counting…"
+msgstr ""
 
 #. translators: %s: number of sources.
-#: includes/admin/views/page.php:73
+#: includes/admin/views/page.php:64
 #, php-format
 msgid "%s source"
 msgid_plural "%s sources"
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/admin/views/page.php:81
-#: assets/js/admin.js:427
-msgid "Your database is tidy. None of the supported sources have anything to clean right now."
+#: includes/admin/views/page.php:67
+msgid "JavaScript is needed to see how much each source holds and to clean it."
 msgstr ""
 
-#: includes/admin/views/page.php:86
-#: assets/js/admin.js:783
+#: includes/admin/views/page.php:71
+#: assets/js/admin.js:1074
 msgid "Sources"
 msgstr ""
 
-#: includes/admin/views/page.php:106
+#: includes/admin/views/page.php:87
 msgid "Nothing to clean"
 msgstr ""
 
-#: includes/admin/views/page.php:113
+#: includes/admin/views/page.php:94
 msgid "Include in automatic cleaning"
 msgstr ""
 
-#: includes/admin/views/page.php:117
+#: includes/admin/views/page.php:98
 msgid "Clean…"
 msgstr ""
 
-#: includes/admin/views/page.php:123
-#: assets/js/admin.js:1664
+#: includes/admin/views/page.php:104
+#: assets/js/admin.js:1986
 msgid "Details"
 msgstr ""
 
-#: includes/admin/views/page.php:127
+#: includes/admin/views/page.php:108
 msgid "Database tables"
 msgstr ""
 
-#: includes/admin/views/page.php:131
+#: includes/admin/views/page.php:114
 msgid "Table"
 msgstr ""
 
-#: includes/admin/views/page.php:132
+#: includes/admin/views/page.php:115
 msgid "Size on disk"
 msgstr ""
 
-#: includes/admin/views/page.php:150
+#: includes/admin/views/page.php:129
 msgid "What's deleted"
 msgstr ""
 
-#: includes/admin/views/page.php:155
+#: includes/admin/views/page.php:140
 msgid "What's kept"
 msgstr ""
 
-#: includes/admin/views/page.php:166
+#: includes/admin/views/page.php:151
 msgid "None of the supported plugins were found on this site. Post revisions and expired transients can still be cleaned."
 msgstr ""
 
 #. translators: %s: number of sources.
-#: includes/admin/views/page.php:174
+#: includes/admin/views/page.php:159
 #, php-format
 msgid "Network administrator only (%s)"
 msgstr ""
 
 #. translators: %s: number of sources.
-#: includes/admin/views/page.php:193
+#: includes/admin/views/page.php:178
 #, php-format
 msgid "Not detected on this site (%s)"
 msgstr ""
 
-#: includes/admin/views/page.php:208
+#: includes/admin/views/page.php:193
 msgid "Automatic cleaning"
 msgstr ""
 
-#: includes/admin/views/page.php:212
+#: includes/admin/views/page.php:197
 msgid "Automatic cleaning: Daily"
 msgstr ""
 
-#: includes/admin/views/page.php:214
+#: includes/admin/views/page.php:199
 msgid "Automatic cleaning: Weekly"
 msgstr ""
 
-#: includes/admin/views/page.php:216
+#: includes/admin/views/page.php:201
 msgid "Automatic cleaning: Off"
 msgstr ""
 
-#: includes/admin/views/page.php:221
+#: includes/admin/views/page.php:206
 msgid "Off"
 msgstr ""
 
-#: includes/admin/views/page.php:222
+#: includes/admin/views/page.php:207
 msgid "Daily"
 msgstr ""
 
-#: includes/admin/views/page.php:223
+#: includes/admin/views/page.php:208
 msgid "Weekly"
 msgstr ""
 
-#: includes/admin/views/page.php:224
+#: includes/admin/views/page.php:209
 msgid "Optimize tables"
 msgstr ""
 
-#: includes/admin/views/page.php:227
+#: includes/admin/views/page.php:212
 msgid "Only the sources switched on under \"Include in automatic cleaning\" are cleaned."
 msgstr ""
 
-#: includes/admin/views/page.php:230
+#: includes/admin/views/page.php:215
 msgid "Optimize tables only rebuilds tables where entries were removed. Automatic cleaning never rebuilds WordPress core tables."
 msgstr ""
 
-#: includes/admin/views/page.php:236
-#: assets/js/admin.js:1246
+#: includes/admin/views/page.php:221
+#: assets/js/admin.js:1564
 msgid "Automatic cleaning is on. It runs daily."
 msgstr ""
 
-#: includes/admin/views/page.php:238
-#: assets/js/admin.js:1246
+#: includes/admin/views/page.php:223
+#: assets/js/admin.js:1564
 msgid "Automatic cleaning is on. It runs weekly."
 msgstr ""
 
 #. translators: 1: date, 2: number of entries removed.
-#: includes/admin/views/page.php:242
-#: assets/js/admin.js:1251
+#: includes/admin/views/page.php:227
+#: assets/js/admin.js:1569
 #, php-format,js-format
 msgid "Last run: %1$s, removed %2$s entry."
 msgid_plural "Last run: %1$s, removed %2$s entries."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/admin/views/page.php:250
+#. translators: %s: error message from the database.
+#: includes/admin/views/page.php:237
+#, php-format
+msgid "Last automatic run failed: %s. It will retry automatically."
+msgstr ""
+
+#: includes/admin/views/page.php:244
 msgid "Advanced"
 msgstr ""
 
-#: includes/admin/views/page.php:252
+#: includes/admin/views/page.php:246
 msgid "Entries per batch"
 msgstr ""
 
-#: includes/admin/views/page.php:254
+#: includes/admin/views/page.php:248
 msgid "Automatic (recommended)"
 msgstr ""
 
-#: includes/admin/views/page.php:256
+#: includes/admin/views/page.php:250
 msgid "Fixed:"
 msgstr ""
 
-#: includes/admin/views/page.php:257
+#: includes/admin/views/page.php:251
 msgid "Fixed number of entries per batch"
 msgstr ""
 
-#: includes/admin/views/page.php:261
+#: includes/admin/views/page.php:255
 msgid "Use a number from 1,000 to 100,000. Other values are adjusted to fit."
 msgstr ""
 
-#: includes/admin/views/page.php:262
+#: includes/admin/views/page.php:256
 msgid "Larger batches clean faster but can time out on slower hosting. Applies to plugin log tables; post revisions and transients always use safe sizes."
 msgstr ""
 
 #. translators: 1: number of selected sources, 2: number of entries.
-#: includes/admin/views/page.php:271
-#: assets/js/admin.js:307
+#: includes/admin/views/page.php:265
+#: assets/js/admin.js:317
 #, php-format,js-format
 msgid "%1$s selected · %2$s entry"
 msgid_plural "%1$s selected · %2$s entries"
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/admin/views/page.php:276
+#: includes/admin/views/page.php:270
 msgid "Clean selected…"
 msgstr ""
 
-#: includes/rules/abstract-class-plclean-rule.php:138
+#. translators: %s: number of batches.
+#: includes/class-plclean-cleaner.php:123
+#, php-format
+msgid "Stopped after %s batches in a row that removed nothing. Try again later."
+msgstr ""
+
+#: includes/class-plclean-cleaner.php:227
+msgid "Unknown database error."
+msgstr ""
+
+#: includes/rules/abstract-class-plclean-rule.php:207
 msgid "Cleaned. Space on disk is given back when tables are optimized."
 msgstr ""
 
@@ -281,7 +293,7 @@ msgid "Action Scheduler: finished actions and logs"
 msgstr ""
 
 #: includes/rules/class-plclean-rule-action-scheduler.php:39
-msgid "Deletes completed, canceled and failed scheduled actions and their log entries."
+msgid "Deletes completed and canceled scheduled actions, failed ones older than 7 days, and their log entries."
 msgstr ""
 
 #: includes/rules/class-plclean-rule-action-scheduler.php:48
@@ -289,7 +301,11 @@ msgid "Cleaned. Space on disk is given back when tables are optimized. The size 
 msgstr ""
 
 #: includes/rules/class-plclean-rule-action-scheduler.php:57
-msgid "pending tasks"
+msgid "WooCommerce removes finished tasks itself, but slowly (a few at a time). Log Broom removes them all now."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-action-scheduler.php:66
+msgid "pending and running tasks; failed tasks from the last 7 days"
 msgstr ""
 
 #: includes/rules/class-plclean-rule-rank-math-404.php:30
@@ -301,6 +317,10 @@ msgid "Deletes the 404 errors recorded by the Rank Math 404 monitor."
 msgstr ""
 
 #: includes/rules/class-plclean-rule-rank-math-404.php:48
+msgid "Rank Math only caps the number of 404 entries it keeps."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-rank-math-404.php:57
 msgid "your redirections and SEO settings"
 msgstr ""
 
@@ -313,6 +333,10 @@ msgid "Deletes the redirect hit log and the 404 error log of the Redirection plu
 msgstr ""
 
 #: includes/rules/class-plclean-rule-redirection.php:48
+msgid "Redirection can expire logs itself."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-redirection.php:57
 msgid "your redirects"
 msgstr ""
 
@@ -321,14 +345,18 @@ msgid "Post revisions"
 msgstr ""
 
 #: includes/rules/class-plclean-rule-revisions.php:39
-msgid "Deletes old saved versions (revisions) of posts and pages."
+msgid "Deletes old saved versions (revisions) of posts, pages, products and other content."
 msgstr ""
 
 #: includes/rules/class-plclean-rule-revisions.php:57
-msgid "posts, pages and autosaves"
+msgid "autosaves; Site Editor history (styles, templates, navigation, patterns, custom CSS)"
 msgstr ""
 
-#: includes/rules/class-plclean-rule-revisions.php:84
+#: includes/rules/class-plclean-rule-revisions.php:66
+msgid "Includes revisions from page builders such as Elementor."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-revisions.php:148
 msgid "Shared WordPress tables — only revision rows are removed."
 msgstr ""
 
@@ -340,7 +368,15 @@ msgstr ""
 msgid "Deletes the whole Solid Security event log, attempt counters older than one day, and lockouts that expired longer ago than the \"Days to Remember Lockouts\" period plus one day. Attempt counters and lockouts follow the same retention as Solid Security's own cleanup."
 msgstr ""
 
-#: includes/rules/class-plclean-rule-solid-security.php:58
+#: includes/rules/class-plclean-rule-solid-security.php:59
+msgid "Also clears Solid Security's unread security alerts and last site-scan result."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-solid-security.php:68
+msgid "Solid Security rotates its own logs."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-solid-security.php:77
 msgid "active lockouts, recent lockouts used for repeat-offender bans, attempt counters from the last day, bans"
 msgstr ""
 
@@ -373,6 +409,10 @@ msgid "WooCommerce stores logs as files by default (wp-content/uploads/wc-logs).
 msgstr ""
 
 #: includes/rules/class-plclean-rule-woocommerce-log.php:57
+msgid "WooCommerce deletes its own old logs (30 days by default)."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-woocommerce-log.php:66
 msgid "orders, products and settings"
 msgstr ""
 
@@ -385,6 +425,10 @@ msgid "Deletes Wordfence live traffic older than 24 hours, failed login attempts
 msgstr ""
 
 #: includes/rules/class-plclean-rule-wordfence.php:48
+msgid "Wordfence caps live traffic itself (Wordfence → All Options → Live Traffic)."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-wordfence.php:57
 msgid "Wordfence settings, blocked IPs, 2FA, successful logins, the last 24 hours of traffic and all scan results and scan working data"
 msgstr ""
 
@@ -397,6 +441,10 @@ msgid "Deletes the recorded events and their details from the WP Activity Log ta
 msgstr ""
 
 #: includes/rules/class-plclean-rule-wp-activity-log.php:48
+msgid "WP Activity Log can delete old events itself (its retention setting). Log Broom removes them regardless of that setting."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-wp-activity-log.php:57
 msgid "activity log settings"
 msgstr ""
 
@@ -409,6 +457,10 @@ msgid "Deletes the debug events recorded by WP Mail SMTP."
 msgstr ""
 
 #: includes/rules/class-plclean-rule-wp-mail-smtp.php:48
+msgid "Cleaning also resets WP Mail SMTP's recent email-error count on its dashboard."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-wp-mail-smtp.php:57
 msgid "mailer settings and queued emails"
 msgstr ""
 
@@ -447,18 +499,70 @@ msgstr ""
 msgid "Your session expired. Reload the page and try again."
 msgstr ""
 
-#: assets/js/admin.js:469
-#: assets/js/admin.js:1078
-#: assets/js/admin.js:1215
+#. translators: 1: number of tasks, e.g. "2,000,000 tasks", 2: number of log entries, e.g. "4,000,000 log entries".
+#: assets/js/admin.js:400
+#, js-format
+msgid "%1$s + %2$s"
+msgstr ""
+
+#. translators: %s: number of scheduled tasks.
+#: assets/js/admin.js:402
+#, js-format
+msgid "%s task"
+msgid_plural "%s tasks"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of log entries.
+#: assets/js/admin.js:404
+#, js-format
+msgid "%s log entry"
+msgid_plural "%s log entries"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of entries.
+#: assets/js/admin.js:454
+#, js-format
+msgid "%s entry"
+msgid_plural "%s entries"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: data size, e.g. "1.4 GB".
+#: assets/js/admin.js:478
+#, js-format
+msgid "%s of log data found"
+msgstr ""
+
+#: assets/js/admin.js:520
+msgid "Your database is tidy. None of the supported sources have anything to clean right now."
+msgstr ""
+
+#: assets/js/admin.js:659
+msgid "Retry"
+msgstr ""
+
+#: assets/js/admin.js:661
+msgid "Couldn't count"
+msgstr ""
+
+#: assets/js/admin.js:731
+#: assets/js/admin.js:1396
+#: assets/js/admin.js:1533
 msgid "Close"
 msgstr ""
 
-#: assets/js/admin.js:540
+#: assets/js/admin.js:802
 msgid "This can't be undone. The only way to get this data back is from a database backup."
 msgstr ""
 
+#: assets/js/admin.js:824
+msgid "Includes security or activity history. Some sites keep this for audits."
+msgstr ""
+
 #. translators: 1: source name, 2: number of entries, 3: data size.
-#: assets/js/admin.js:567
+#: assets/js/admin.js:850
 #, js-format
 msgid "%1$s: %2$s entry (%3$s)"
 msgid_plural "%1$s: %2$s entries (%3$s)"
@@ -466,42 +570,42 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: source name, 2: number of entries.
-#: assets/js/admin.js:574
+#: assets/js/admin.js:857
 #, js-format
 msgid "%1$s: %2$s entry"
 msgid_plural "%1$s: %2$s entries"
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/js/admin.js:585
+#: assets/js/admin.js:868
 msgid "Delete log data"
 msgstr ""
 
-#: assets/js/admin.js:586
+#: assets/js/admin.js:869
 msgid "Cancel, keep data"
 msgstr ""
 
-#: assets/js/admin.js:588
+#: assets/js/admin.js:871
 msgid "This will delete:"
 msgstr ""
 
 #. translators: %s: what is kept, e.g. "pending tasks".
-#: assets/js/admin.js:595
+#: assets/js/admin.js:878
 #, js-format
 msgid "Kept: %s"
 msgstr ""
 
-#: assets/js/admin.js:595
+#: assets/js/admin.js:878
 msgctxt "list separator"
 msgid ", "
 msgstr ""
 
-#: assets/js/admin.js:600
+#: assets/js/admin.js:887
 msgid "I have a recent backup of my database and know how to restore it."
 msgstr ""
 
 #. translators: %s: number of entries.
-#: assets/js/admin.js:607
+#: assets/js/admin.js:894
 #, js-format
 msgid "Permanently delete %s log entry?"
 msgid_plural "Permanently delete %s log entries?"
@@ -509,41 +613,41 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: source name, 2: number of entries removed.
-#: assets/js/admin.js:760
+#: assets/js/admin.js:1051
 #, js-format
 msgid "%1$s — %2$s removed"
 msgstr ""
 
 #. translators: 1: source name, 2: entries removed so far, 3: total entries for this source.
-#: assets/js/admin.js:763
+#: assets/js/admin.js:1054
 #, js-format
 msgid "%1$s — %2$s of %3$s"
 msgstr ""
 
 #. translators: %s: source name.
-#: assets/js/admin.js:766
+#: assets/js/admin.js:1057
 #, js-format
 msgid "%s — some entries couldn't be deleted"
 msgstr ""
 
 #. translators: %s: source name.
-#: assets/js/admin.js:769
+#: assets/js/admin.js:1060
 #, js-format
 msgid "%s — skipped (not available)"
 msgstr ""
 
 #. translators: %s: source name.
-#: assets/js/admin.js:772
+#: assets/js/admin.js:1063
 #, js-format
 msgid "%s — waiting"
 msgstr ""
 
-#: assets/js/admin.js:833
+#: assets/js/admin.js:1124
 msgid "less than a minute left"
 msgstr ""
 
 #. translators: %s: number of minutes.
-#: assets/js/admin.js:839
+#: assets/js/admin.js:1130
 #, js-format
 msgid "about %s min left"
 msgid_plural "about %s min left"
@@ -551,25 +655,41 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: number of hours, 2: number of minutes.
-#: assets/js/admin.js:846
+#: assets/js/admin.js:1137
 #, js-format
 msgid "about %1$s h %2$s min left"
 msgid_plural "about %1$s h %2$s min left"
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/js/admin.js:864
+#: assets/js/admin.js:1155
 msgid "Estimating time left…"
 msgstr ""
 
 #. translators: 1: entries removed per second, 2: time left, e.g. "about 2 min left".
-#: assets/js/admin.js:876
+#: assets/js/admin.js:1167
 #, js-format
 msgid "≈ %1$s entries/sec · %2$s"
 msgstr ""
 
+#. translators: %s: number of scheduled tasks per batch (their log entries are removed with them).
+#: assets/js/admin.js:1193
+#, js-format
+msgid "Batch: %s task (fixed)"
+msgid_plural "Batch: %s tasks (fixed)"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of scheduled tasks per batch (their log entries are removed with them).
+#: assets/js/admin.js:1198
+#, js-format
+msgid "Batch: %s task (automatic)"
+msgid_plural "Batch: %s tasks (automatic)"
+msgstr[0] ""
+msgstr[1] ""
+
 #. translators: %s: number of entries per batch.
-#: assets/js/admin.js:901
+#: assets/js/admin.js:1204
 #, js-format
 msgid "Batch: %s entry (fixed)"
 msgid_plural "Batch: %s entries (fixed)"
@@ -577,7 +697,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of entries per batch.
-#: assets/js/admin.js:907
+#: assets/js/admin.js:1210
 #, js-format
 msgid "Batch: %s entry (automatic)"
 msgid_plural "Batch: %s entries (automatic)"
@@ -585,70 +705,70 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: entries removed so far, 2: total entries.
-#: assets/js/admin.js:940
+#: assets/js/admin.js:1243
 #, js-format
 msgid "Cleaning… %1$s of %2$s removed"
 msgstr ""
 
-#: assets/js/admin.js:949
+#: assets/js/admin.js:1252
 msgid "Cleaning progress"
 msgstr ""
 
-#: assets/js/admin.js:958
+#: assets/js/admin.js:1261
 msgid "Keep this tab open. Large logs can take a few minutes."
 msgstr ""
 
 #. translators: %s: source name.
-#: assets/js/admin.js:986
+#: assets/js/admin.js:1289
 #, js-format
 msgid "Now cleaning: %s"
 msgstr ""
 
-#: assets/js/admin.js:1047
+#: assets/js/admin.js:1365
 msgid "Optimizing tables…"
 msgstr ""
 
-#: assets/js/admin.js:1085
+#: assets/js/admin.js:1403
 msgid "Anything already removed stays removed."
 msgstr ""
 
-#: assets/js/admin.js:1088
+#: assets/js/admin.js:1406
 msgid "Reload page"
 msgstr ""
 
 #. translators: %s: source name.
-#: assets/js/admin.js:1095
+#: assets/js/admin.js:1413
 #, js-format
 msgid "The server stopped responding while cleaning %s, probably a timeout. Anything already removed stays removed."
 msgstr ""
 
 #. translators: %s: source name.
-#: assets/js/admin.js:1103
+#: assets/js/admin.js:1421
 #, js-format
 msgid "Cleaning %s stopped. Anything already removed stays removed."
 msgstr ""
 
 #. translators: %s: source name.
-#: assets/js/admin.js:1110
+#: assets/js/admin.js:1428
 #, js-format
 msgid "The server sent an unexpected answer while cleaning %s. Anything already removed stays removed."
 msgstr ""
 
-#: assets/js/admin.js:1118
+#: assets/js/admin.js:1436
 msgid "Try a smaller batch size in Advanced settings."
 msgstr ""
 
-#: assets/js/admin.js:1123
+#: assets/js/admin.js:1441
 msgid "Resume cleaning"
 msgstr ""
 
-#: assets/js/admin.js:1131
-#: assets/js/admin.js:1139
+#: assets/js/admin.js:1449
+#: assets/js/admin.js:1457
 msgid "Cleaning paused"
 msgstr ""
 
 #. translators: 1: number of entries, 2: data size.
-#: assets/js/admin.js:1160
+#: assets/js/admin.js:1478
 #, js-format
 msgid "Done! Removed %1$s entry and freed about %2$s."
 msgid_plural "Done! Removed %1$s entries and freed about %2$s."
@@ -656,62 +776,62 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of entries.
-#: assets/js/admin.js:1166
+#: assets/js/admin.js:1484
 #, js-format
 msgid "Done! Removed %s entry."
 msgid_plural "Done! Removed %s entries."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/js/admin.js:1182
+#: assets/js/admin.js:1500
 msgid "Not cleaned: only a network administrator can clean network-wide logs."
 msgstr ""
 
-#: assets/js/admin.js:1183
+#: assets/js/admin.js:1501
 msgid "Not cleaned: this source is no longer on this site."
 msgstr ""
 
-#: assets/js/admin.js:1200
+#: assets/js/admin.js:1518
 msgid "Some entries couldn't be deleted. Try again later."
 msgstr ""
 
-#: assets/js/admin.js:1211
+#: assets/js/admin.js:1529
 msgid "Tip: turn on 'Optimize tables' to give the freed space back to your server."
 msgstr ""
 
-#: assets/js/admin.js:1335
+#: assets/js/admin.js:1657
 msgid "Saved"
 msgstr ""
 
-#: assets/js/admin.js:1340
-#: assets/js/admin.js:1583
+#: assets/js/admin.js:1662
+#: assets/js/admin.js:1905
 msgid "Could not save. Please try again."
 msgstr ""
 
-#: assets/js/admin.js:1532
+#: assets/js/admin.js:1854
 msgid "Turn on automatic cleaning"
 msgstr ""
 
-#: assets/js/admin.js:1533
+#: assets/js/admin.js:1855
 msgid "Cancel"
 msgstr ""
 
-#: assets/js/admin.js:1545
+#: assets/js/admin.js:1867
 msgid "Turn on automatic cleaning?"
 msgstr ""
 
-#: assets/js/admin.js:1552
+#: assets/js/admin.js:1874
 msgid "Every day, the sources you include are cleaned without asking again."
 msgstr ""
 
-#: assets/js/admin.js:1553
+#: assets/js/admin.js:1875
 msgid "Every week, the sources you include are cleaned without asking again."
 msgstr ""
 
-#: assets/js/admin.js:1556
+#: assets/js/admin.js:1878
 msgid "I have regular automatic backups of my database."
 msgstr ""
 
-#: assets/js/admin.js:1664
+#: assets/js/admin.js:1986
 msgid "Hide details"
 msgstr ""

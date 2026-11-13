@@ -50,6 +50,25 @@ class PLCLEAN_Rule_Solid_Security extends PLCLEAN_Rule_Table {
 	}
 
 	/**
+	 * Extra note for the "What's deleted" part of Details: the whole event log goes, including the entries behind
+	 * Solid Security's unread alerts (highlighted log entries) and its latest site-scan result.
+	 *
+	 * @return string
+	 */
+	public function details_note() {
+		return __( 'Also clears Solid Security\'s unread security alerts and last site-scan result.', 'log-broom' );
+	}
+
+	/**
+	 * What the plugin cleans by itself (shown in Details).
+	 *
+	 * @return string
+	 */
+	public function builtin_note() {
+		return __( 'Solid Security rotates its own logs.', 'log-broom' );
+	}
+
+	/**
 	 * What is kept.
 	 *
 	 * @return string

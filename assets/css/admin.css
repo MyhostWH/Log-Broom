@@ -432,6 +432,10 @@
 	color: var(--plclean-text-muted);
 }
 
+.plclean-tables .plclean-tables-head[hidden] {
+	display: none;
+}
+
 /* Clean state. */
 .plclean-source.is-clean .plclean-card {
 	cursor: default;
@@ -449,6 +453,51 @@
 
 .plclean-source.is-clean:hover {
 	box-shadow: var(--plclean-shadow);
+}
+
+/* Counting: the count and size follow the page (plclean_stats); until then the source can't be selected. */
+.plclean-source.is-counting .plclean-card-count,
+.plclean-summary[aria-busy="true"] .plclean-summary-count-value {
+	font-size: 13px;
+	font-weight: 400;
+	color: var(--plclean-text-muted);
+}
+
+/* A count in parts ("2,000,000 tasks + 4,000,000 log entries") is longer than a number. */
+.plclean-card-count.has-parts {
+	font-size: 14px;
+	white-space: normal;
+}
+
+.plclean-source.is-counting .plclean-card,
+.plclean-source.is-count-error .plclean-card {
+	cursor: default;
+}
+
+.plclean-count-error {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--plclean-space-1);
+	font-size: 13px;
+	color: var(--plclean-danger-strong);
+}
+
+.plclean-count-error .dashicons {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+}
+
+.plclean-app .plclean-count-retry {
+	min-height: 24px;
+	color: var(--plclean-accent-strong);
+	text-decoration: underline;
+}
+
+.plclean-no-js-note {
+	flex-basis: 100%;
+	margin: 0;
+	color: var(--plclean-text-muted);
 }
 
 /* Details disclosure: outside the card's <label>, so opening it never toggles the selection. */

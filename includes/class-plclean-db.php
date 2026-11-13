@@ -20,6 +20,13 @@ class PLCLEAN_DB {
 	private static $cache = array();
 
 	/**
+	 * Whether this request already asked MySQL 8 for current table statistics.
+	 *
+	 * @var bool
+	 */
+	private static $fresh_stats = false;
+
+	/**
 	 * Find the real name of a table, matching case-insensitively.
 	 *
 	 * @param string $suffix Table name without the prefix.
@@ -54,12 +61,50 @@ class PLCLEAN_DB {
 	}
 
 	/**
-	 * Clear the table-name cache.
+	 * Clear the per-request caches (table names, and whether fresh table statistics were asked for).
 	 *
 	 * @return void
 	 */
 	public static function flush_cache() {
-		self::$cache = array();
+		self::$cache       = array();
+		self::$fresh_stats = false;
+	}
+
+	/**
+	 * Whether a database server version string is MySQL 8.0 or later (not MariaDB, which also reports a version
+	 * such as "5.5.5-10.11.14-MariaDB").
+	 *
+	 * @param string $server_info Server version string, e.g. from $wpdb->db_server_info().
+	 * @return bool
+	 */
+	public static function is_mysql8( $server_info ) {
+		$info = (string) $server_info;
+		if ( false !== stripos( $info, 'mariadb' ) || ! preg_match( '/^(\d+\.\d+)/', $info, $m ) ) {
+			return false;
+		}
+		return version_compare( $m[1], '8.0', '>=' );
+	}
+
+	/**
+	 * On MySQL 8, make information_schema sizes current for this session (they are cached for 24 hours by
+	 * default, so a size read after a clean or an optimize would be stale). Once per request; errors are ignored.
+	 *
+	 * @return void
+	 */
+	private static function fresh_stats() {
+		global $wpdb;
+		if ( self::$fresh_stats ) {
+			return;
+		}
+		self::$fresh_stats = true;
+		if ( ! self::is_mysql8( $wpdb->db_server_info() ) ) {
+			return;
+		}
+		$suppress = $wpdb->suppress_errors( true );
+		// A fixed session setting, no values.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query( 'SET SESSION information_schema_stats_expiry = 0' );
+		$wpdb->suppress_errors( $suppress );
 	}
 
 	/**
@@ -70,6 +115,8 @@ class PLCLEAN_DB {
 	 */
 	public static function table_size( $table ) {
 		global $wpdb;
+
+		self::fresh_stats();
 
 		// Reading live table statistics; caching would make the size stale.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching

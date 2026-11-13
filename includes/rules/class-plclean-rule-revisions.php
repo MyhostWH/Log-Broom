@@ -70,20 +70,24 @@ class PLCLEAN_Rule_Revisions extends PLCLEAN_Rule {
 	 * Post types whose revisions are always kept: the Site Editor's design history (Styles > Revisions,
 	 * template, navigation and pattern history, Additional CSS).
 	 *
-	 * Filterable through `plclean_revisions_excluded_types`; every entry is passed through sanitize_key().
+	 * Filterable through `plclean_revisions_excluded_types`, which can only ADD types: the defaults are always
+	 * merged back in, and a filter result that is not an array is ignored. Every entry is passed through
+	 * sanitize_key().
 	 *
 	 * @return string[]
 	 */
 	public function excluded_types() {
-		$types = array( 'wp_global_styles', 'wp_template', 'wp_template_part', 'wp_navigation', 'wp_block', 'custom_css' );
+		$defaults = array( 'wp_global_styles', 'wp_template', 'wp_template_part', 'wp_navigation', 'wp_block', 'custom_css' );
 		/**
-		 * Filters the post types whose revisions Log Broom never deletes.
+		 * Filters the post types whose revisions Log Broom never deletes. Types can only be added: the Site
+		 * Editor types are always kept.
 		 *
 		 * @param string[] $types Post type names.
 		 */
-		$types = apply_filters( 'plclean_revisions_excluded_types', $types );
-		$out   = array();
-		foreach ( (array) $types as $type ) {
+		$filtered = apply_filters( 'plclean_revisions_excluded_types', $defaults );
+		$types    = is_array( $filtered ) ? array_merge( $defaults, $filtered ) : $defaults;
+		$out      = array();
+		foreach ( $types as $type ) {
 			if ( ! is_string( $type ) ) {
 				continue;
 			}
@@ -172,7 +176,7 @@ class PLCLEAN_Rule_Revisions extends PLCLEAN_Rule {
 	public function count() {
 		global $wpdb;
 		// The fragment is prepared in revisions_sql().
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		return (int) $wpdb->get_var( 'SELECT COUNT(*) ' . $this->revisions_sql() );
 	}
 
@@ -194,7 +198,7 @@ class PLCLEAN_Rule_Revisions extends PLCLEAN_Rule {
 		$from  = $this->revisions_sql();
 		while ( $deleted < $limit ) {
 			// $from is prepared in revisions_sql(); the cursor and limit are prepared here.
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$ids = $wpdb->get_col( 'SELECT r.ID ' . $from . $wpdb->prepare( ' AND r.ID > %d ORDER BY r.ID ASC LIMIT %d', $after, $limit - $deleted ) );
 			if ( ! $ids ) {
 				break;

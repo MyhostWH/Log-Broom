@@ -40,6 +40,15 @@ class PLCLEAN_Rule_WP_Activity_Log extends PLCLEAN_Rule_Table {
 	}
 
 	/**
+	 * What the plugin cleans by itself (shown in Details).
+	 *
+	 * @return string
+	 */
+	public function builtin_note() {
+		return __( 'WP Activity Log can delete old events itself (its retention setting). Log Broom removes them regardless of that setting.', 'log-broom' );
+	}
+
+	/**
 	 * What is kept.
 	 *
 	 * @return string

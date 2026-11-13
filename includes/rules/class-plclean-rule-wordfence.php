@@ -40,6 +40,15 @@ class PLCLEAN_Rule_Wordfence extends PLCLEAN_Rule_Table {
 	}
 
 	/**
+	 * What the plugin cleans by itself (shown in Details).
+	 *
+	 * @return string
+	 */
+	public function builtin_note() {
+		return __( 'Wordfence caps live traffic itself (Wordfence → All Options → Live Traffic).', 'log-broom' );
+	}
+
+	/**
 	 * What is kept.
 	 *
 	 * @return string

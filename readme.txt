@@ -30,8 +30,8 @@ Sources from other plugins appear only when that plugin's tables exist on your s
 * WP Mail SMTP debug events: deletes the recorded debug events. Mailer settings and queued emails are kept.
 * WP Activity Log: deletes the recorded events and their details. Activity log settings are kept.
 * Wordfence: deletes live traffic older than 24 hours, failed login attempts and the scan activity log. Wordfence settings, blocked IPs, 2FA, successful logins (Wordfence uses them to recognise trusted IPs), the last 24 hours of traffic, scan results and scan working data are kept.
-* Action Scheduler (used by WooCommerce and other plugins): deletes completed, canceled and failed actions and their log entries. Pending and in-progress tasks are kept.
-* Solid Security: deletes the whole event log, attempt counters older than one day, and lockouts that expired longer ago than the ban period ("Days to Remember Lockouts") plus one day (8 days by default). Attempt counters and lockouts follow the same retention as Solid Security's own cleanup. Active lockouts, recent lockouts used for repeat-offender bans, attempt counters from the last day and bans are kept.
+* Action Scheduler (used by WooCommerce and other plugins): deletes completed and canceled actions, failed actions older than 7 days, and their log entries. Pending and in-progress tasks and failed tasks from the last 7 days are kept.
+* Solid Security: deletes the whole event log, attempt counters older than one day, and lockouts that expired longer ago than the ban period ("Days to Remember Lockouts") plus one day (8 days by default). Attempt counters and lockouts follow the same retention as Solid Security's own cleanup. Active lockouts, recent lockouts used for repeat-offender bans, attempt counters from the last day and bans are kept. Because the whole event log is deleted, this also clears Solid Security's unread security alerts and its last site-scan result.
 
 Plugin names are used only to describe what each source cleans. This plugin is not affiliated with or endorsed by them.
 
@@ -59,7 +59,7 @@ No. Deleted log entries cannot be restored by this plugin. Back up your database
 
 = Will it delete pending WooCommerce tasks? =
 
-No. Only completed, canceled and failed Action Scheduler actions and their logs are removed. Pending and in-progress actions are kept.
+No. Only completed and canceled Action Scheduler actions, failed actions older than 7 days, and their logs are removed. Pending and in-progress actions, and actions that failed in the last 7 days, are kept.
 
 = Why is the size shown as "—" for revisions? =
 
@@ -88,7 +88,7 @@ No. See the Privacy section.
 
 == Privacy ==
 
-Log Broom does not collect, store or send any personal data, makes no external requests, and loads no assets from other servers. It stores only its own settings, the time and number of entries of the last cleaning run, and small internal values used while an automatic cleaning run is in progress (the list of sources whose tables are waiting to be optimized and the running total of entries removed) in your site's options table. None of this is personal data, and all of it is removed when you delete the plugin.
+Log Broom does not collect, store or send any personal data, makes no external requests, and loads no assets from other servers. It stores only its own settings, the time and number of entries of the last cleaning run, and small internal values used while an automatic cleaning run is in progress (the names of the database tables waiting to be optimized and the running total of entries removed), and the database error message of the last automatic run if it failed, in your site's options table. None of this is personal data, and all of it is removed when you delete the plugin.
 
 == Changelog ==
 
@@ -97,9 +97,16 @@ Log Broom does not collect, store or send any personal data, makes no external r
 * Safer Wordfence cleaning: keeps successful logins, scan results and scan working data, and the last 24 hours of traffic. Thanks to Yossi Gueta.
 * Fix: automatic cleaning no longer forgets sources whose plugin is temporarily inactive when you save settings.
 * Fix: saving settings no longer postpones the next automatic cleaning.
-* Fix: post revisions that another plugin protects no longer block cleaning of the rest.
+* Fix: post revisions that another plugin protects no longer block cleaning of the rest. Thanks to Yossi Gueta for reporting and fixing these.
+* Fix: post revisions keep the Site Editor's history (styles, templates, template parts, navigation, synced patterns and custom CSS); revisions of other content, including products, are still cleaned. Thanks to Yossi Gueta.
+* Fix: a database error during cleaning (for example a lock wait timeout) is now reported instead of counted as a finished run. Automatic cleaning retries 5 minutes later and the admin page shows the error. Thanks to Yossi Gueta.
+* Fix: "Optimize tables" now rebuilds only the tables entries were removed from. Thanks to Yossi Gueta.
+* Fix: on multisite, network-wide logs are cleaned only from the main site of the main network, and only network administrators can optimize the network options table. Thanks to Yossi Gueta.
+* Fix: Action Scheduler failed tasks from the last 7 days are kept, so Action Scheduler can still stop frequently recurring tasks that keep failing.
+* New: Details notes about each plugin's own cleanup, a note that cleaning Solid Security also clears its unread alerts and last site-scan result, and a confirmation line when security or activity history is selected.
 * Fix: "Last run" now counts every part of a long automatic cleaning run.
 * Fix: an expired login session during cleaning now asks you to reload the page; the fixed batch size is saved only when you finish typing, and choosing Automatic right after typing works; the summary wording, focus after cancelling, and the page without JavaScript are corrected.
+* Much faster on sites with millions of WooCommerce scheduled tasks: the page opens instantly and cleaning is faster.
 
 = 1.0.0 =
 * Initial release.

@@ -17,20 +17,20 @@ Log Broom is a lightweight WordPress plugin that safely cleans database log bloa
 
 ## Supported sources
 
-| Source | Tables cleaned | Kept |
+| Source | What is cleaned | Always kept |
 |---|---|---|
-| Action Scheduler (WooCommerce and others) | `actionscheduler_actions` (finished), `actionscheduler_logs` | pending and in-progress tasks |
-| WooCommerce database log | `woocommerce_log` | (WooCommerce stores logs as files by default; Log Broom doesn't touch files) |
+| Action Scheduler (WooCommerce and others) | finished tasks (complete, canceled, failed older than 7 days) and their log entries; orphaned logs | pending and running tasks, recent failed tasks |
+| WooCommerce database log | `woocommerce_log` | (WooCommerce stores logs as files by default; Log Broom never touches files) |
 | Redirection | `redirection_logs`, `redirection_404` | your redirects |
 | Rank Math 404 Monitor | `rank_math_404_logs` | redirections, analytics |
 | WP Mail SMTP | `wpmailsmtp_debug_events` | mailer settings, email queue |
-| Wordfence | `wfHits`, `wfStatus`, `wfLogins`, `wfHoover` | settings, blocked IPs, 2FA |
-| Solid Security | `itsec_logs`, `itsec_temp`, expired `itsec_lockouts` | active lockouts, bans |
+| Wordfence | failed logins, live traffic older than 24 hours, activity status | successful logins, recent traffic, scan data, settings, blocked IPs, 2FA |
+| Solid Security | event log, lockouts older than the ban period plus one day, attempt counters older than one day | active and recent lockouts, recent attempt counters, bans |
 | WP Activity Log | `wsal_occurrences`, `wsal_metadata` | plugin settings |
-| Post revisions | revision rows in `posts` / `postmeta` | autosaves, your posts |
+| Revisions | revisions of posts, pages, products and other content (incl. page builders) | autosaves, Site Editor history (styles, templates, navigation, patterns, custom CSS) |
 | Expired transients | expired rows in `options` / `sitemeta` | unexpired transients |
 
-On multisite, the network-wide sources (Wordfence, Solid Security, WP Activity Log) are only available to the network super admin on the main site.
+On multisite, the network-wide sources (Wordfence, Solid Security, WP Activity Log) are only available to the network super admin on the main site of the main network.
 
 ## Requirements
 

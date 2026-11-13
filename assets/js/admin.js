@@ -34,7 +34,7 @@
 	/** Saved batch settings: { mode: 'auto'|'fixed', size }. */
 	const batch = $.extend( { mode: 'auto', size: 5000 }, data.batch || {} );
 
-	/** Sources by id: { id, label, kept, count, size, ... }. */
+	/** Sources by id: { id, label, kept, count, size, ... }. `count` and `size` are null until the source is counted. */
 	const sources = {};
 	( data.sources || [] ).forEach( ( source ) => {
 		sources[ source.id ] = $.extend( {}, source );
@@ -279,6 +279,16 @@
 	 * ------------------------------------------------------------------------------------------- */
 
 	/**
+	 * Whether a source's count is known.
+	 *
+	 * @param {string} id Rule id.
+	 * @return {boolean} Counted.
+	 */
+	function isCounted( id ) {
+		return !! sources[ id ] && null !== sources[ id ].count && undefined !== sources[ id ].count;
+	}
+
+	/**
 	 * Ids of the selected sources, in page order.
 	 *
 	 * @return {string[]} Rule ids.
@@ -294,7 +304,7 @@
 	 * @return {number} Entries.
 	 */
 	function entriesOf( ids ) {
-		return ids.reduce( ( sum, id ) => sum + ( sources[ id ] ? sources[ id ].count : 0 ), 0 );
+		return ids.reduce( ( sum, id ) => sum + ( sources[ id ] && isCounted( id ) ? sources[ id ].count : 0 ), 0 );
 	}
 
 	/** Refresh the sticky bar and the selected state of the cards. */
@@ -342,13 +352,58 @@
 	function renderCard( id ) {
 		const source = sources[ id ];
 		const parts = cardParts( id );
-		animateNumber( parts.$count, source.count, 400 );
+		if ( source.parts ) {
+			showCountParts( parts.$count, source );
+		} else {
+			animateNumber( parts.$count, source.count, 400 );
+		}
 		parts.$card.attr( 'data-count', source.count );
 		if ( 0 === source.count ) {
 			parts.$source.addClass( 'is-clean' );
 			parts.$select.prop( { checked: false, disabled: true } );
 			parts.$one.prop( 'disabled', true );
 		}
+	}
+
+	/**
+	 * Read the parts of a count from a server answer (`parts`: { tasks, logs }), or null.
+	 *
+	 * @param {*} value Answer field.
+	 * @return {?Object} Parts.
+	 */
+	function readParts( value ) {
+		if ( ! value || 'object' !== typeof value || undefined === value.tasks || undefined === value.logs ) {
+			return null;
+		}
+		return {
+			tasks: Math.max( 0, parseInt( value.tasks, 10 ) || 0 ),
+			logs: Math.max( 0, parseInt( value.logs, 10 ) || 0 ),
+		};
+	}
+
+	/**
+	 * Show a count in its parts on the card face: "2,000,000 tasks + 4,000,000 log entries".
+	 *
+	 * @param {jQuery} $count The card's count element.
+	 * @param {Object} source Source with `parts`.
+	 */
+	function showCountParts( $count, source ) {
+		$count.each( function () {
+			if ( this.plcleanFrame ) {
+				window.cancelAnimationFrame( this.plcleanFrame );
+			}
+			this.plcleanValue = source.count;
+		} );
+		$count.addClass( 'has-parts' ).text(
+			sprintf(
+				/* translators: 1: number of tasks, e.g. "2,000,000 tasks", 2: number of log entries, e.g. "4,000,000 log entries". */
+				__( '%1$s + %2$s', 'log-broom' ),
+				/* translators: %s: number of scheduled tasks. */
+				sprintf( _n( '%s task', '%s tasks', source.parts.tasks, 'log-broom' ), fmt( source.parts.tasks ) ),
+				/* translators: %s: number of log entries. */
+				sprintf( _n( '%s log entry', '%s log entries', source.parts.logs, 'log-broom' ), fmt( source.parts.logs ) )
+			)
+		);
 	}
 
 	/**
@@ -365,10 +420,15 @@
 
 	/** Recompute the entry bars (and the size hints) on all cards from the entries left to clean. */
 	function renderSizes() {
-		const maxCount = Object.keys( sources ).reduce( ( m, id ) => Math.max( m, sources[ id ].available ? sources[ id ].count : 0 ), 0 );
+		const maxCount = Object.keys( sources ).reduce( ( m, id ) => Math.max( m, sources[ id ].available && isCounted( id ) ? sources[ id ].count : 0 ), 0 );
 		Object.keys( sources ).forEach( ( id ) => {
 			const parts = cardParts( id );
 			if ( ! parts.$source.length ) {
+				return;
+			}
+			if ( ! isCounted( id ) ) {
+				parts.$size.text( '' );
+				parts.$source.find( '.plclean-bar-fill' ).css( 'width', '0%' );
 				return;
 			}
 			// A cleaned table keeps its disk space until it is optimized: its card shows no size, only "Nothing to clean".
@@ -402,30 +462,66 @@
 		line.appendChild( document.createTextNode( parts.slice( 1 ).join( '' ) ) );
 	}
 
-	/** Refresh the summary card from the current source data. */
+	/**
+	 * Show `size` in the summary's "X of log data found" line, or just "Log data" when there is nothing to clean.
+	 *
+	 * @param {number} size Bytes.
+	 */
+	function renderSummarySize( size ) {
+		const $line = $app.find( '.plclean-summary-size' );
+		if ( size <= 0 ) {
+			// Nothing (known) to clean: no "X of log data found" claim.
+			$line.empty().append( $( '<strong>' ).text( __( 'Log data', 'log-broom' ) ) );
+			return;
+		}
+		/* translators: %s: data size, e.g. "1.4 GB". */
+		const parts = __( '%s of log data found', 'log-broom' ).split( /%(?:1\$)?s/ );
+		$line.empty().append(
+			document.createTextNode( parts[ 0 ] ),
+			$( '<strong class="plclean-summary-size-value"></strong>' ).text( formatBytes( size ) ),
+			document.createTextNode( parts.slice( 1 ).join( '' ) )
+		);
+	}
+
+	/**
+	 * Refresh the summary card from the sources counted so far. The totals grow as counts arrive; the empty state
+	 * appears only once every source is counted and none has anything to clean.
+	 */
 	function renderSummary() {
 		let count = 0;
 		let size = 0;
+		let counted = 0;
 		Object.keys( sources ).forEach( ( id ) => {
-			if ( sources[ id ].available && sources[ id ].count > 0 ) {
+			if ( ! sources[ id ].available || ! isCounted( id ) ) {
+				return;
+			}
+			counted++;
+			if ( sources[ id ].count > 0 ) {
 				count += sources[ id ].count;
 				size += sources[ id ].size;
 			}
 		} );
-		animateNumber( $app.find( '.plclean-summary-count-value' ), count, 600, undefined, renderSummaryCount );
-		const $sizeLine = $app.find( '.plclean-summary-size' );
-		if ( size > 0 ) {
-			$app.find( '.plclean-summary-size-value' ).text( formatBytes( size ) );
-		} else {
-			// Nothing left to clean: no "X of log data found" claim.
-			$sizeLine.empty().append( $( '<strong>' ).text( __( 'Log data', 'log-broom' ) ) );
+		const busy = counting.pending() > 0;
+		const $summary = $app.find( '.plclean-summary' );
+		$summary.attr( 'aria-busy', busy ? 'true' : 'false' );
+		if ( counted > 0 ) {
+			animateNumber( $app.find( '.plclean-summary-count-value' ), count, 600, undefined, renderSummaryCount );
+		} else if ( ! busy ) {
+			// No source could be counted.
+			$app.find( '.plclean-summary-count-value' ).text( '—' );
 		}
-		$app.find( '.plclean-summary' ).attr( { 'data-count': count, 'data-size': size } );
+		renderSummarySize( size );
+		$summary.attr( { 'data-count': count, 'data-size': size } );
 
-		if ( 0 === count && ! $( '#plclean-empty' ).length ) {
-			$( '<p class="plclean-empty" id="plclean-empty"></p>' )
-				.append( icon( 'yes-alt' ), ' ', document.createTextNode( __( 'Your database is tidy. None of the supported sources have anything to clean right now.', 'log-broom' ) ) )
-				.insertAfter( $app.find( '.plclean-summary' ) );
+		const allCounted = ! busy && counted === Object.keys( sources ).filter( ( id ) => sources[ id ].available ).length;
+		if ( allCounted && 0 === count ) {
+			if ( ! $( '#plclean-empty' ).length ) {
+				$( '<p class="plclean-empty" id="plclean-empty"></p>' )
+					.append( icon( 'yes-alt' ), ' ', document.createTextNode( __( 'Your database is tidy. None of the supported sources have anything to clean right now.', 'log-broom' ) ) )
+					.insertAfter( $summary );
+			}
+		} else if ( count > 0 ) {
+			$( '#plclean-empty' ).remove();
 		}
 	}
 
@@ -440,6 +536,172 @@
 			$result = $( '<div class="plclean-result" id="plclean-result"></div>' ).insertAfter( $app.find( '.plclean-summary' ) );
 		}
 		$result.empty().append( icon( 'yes-alt' ), $( '<p>' ).text( text ) );
+	}
+
+	/* ---------------------------------------------------------------------------------------------
+	 * Counting: each source's count and size are asked for after the page opened, at most two at a time
+	 * ------------------------------------------------------------------------------------------- */
+
+	const COUNT_CONCURRENCY = 2;
+
+	const counting = {
+		queue: [], // Rule ids waiting for a request.
+		active: 0, // Requests in flight.
+		pending() {
+			return this.queue.length + this.active;
+		},
+	};
+
+	/**
+	 * Put a card in its "Counting…" state.
+	 *
+	 * @param {string} id Rule id.
+	 */
+	function showCounting( id ) {
+		const parts = cardParts( id );
+		parts.$source.removeClass( 'is-count-error is-clean' ).addClass( 'is-counting' );
+		parts.$source.find( '.plclean-card-stats' ).attr( 'aria-busy', 'true' );
+		// Retry pressed: keep the keyboard focus on the card while the button is replaced by "Counting…".
+		const refocus = parts.$source.find( '.plclean-count-retry' ).is( document.activeElement );
+		parts.$source.find( '.plclean-count-error' ).remove();
+		parts.$count.removeClass( 'has-parts' ).text( __( 'Counting…', 'log-broom' ) ).prop( 'hidden', false );
+		if ( refocus ) {
+			parts.$count.attr( 'tabindex', '-1' ).trigger( 'focus' );
+		}
+		parts.$select.prop( { checked: false, disabled: true } );
+		parts.$one.prop( 'disabled', true );
+	}
+
+	/**
+	 * Fill in a source's Details table sizes.
+	 *
+	 * @param {string} id     Rule id.
+	 * @param {Array}  tables Tables from plclean_stats: { name, size, size_human }.
+	 */
+	function renderTables( id, tables ) {
+		const $list = cardParts( id ).$source.find( '.plclean-tables' );
+		let sized = false;
+		( Array.isArray( tables ) ? tables : [] ).forEach( ( table ) => {
+			const human = table && 'string' === typeof table.size_human ? table.size_human : '';
+			$list.children( '.plclean-table' ).each( function () {
+				if ( ! table || this.getAttribute( 'data-table' ) !== String( table.name ) ) {
+					return;
+				}
+				// Shared core tables have no size of their own to show (only some of their rows are cleaned).
+				$( this ).find( '.plclean-table-size' ).remove();
+				if ( '' !== human ) {
+					$( '<span class="plclean-table-size"></span>' ).text( human ).appendTo( this );
+				}
+			} );
+			sized = sized || '' !== human;
+		} );
+		$list.children( '.plclean-tables-head' ).prop( 'hidden', ! sized );
+	}
+
+	/**
+	 * A source was counted: show its numbers and let it be selected (when it has anything to clean).
+	 *
+	 * @param {string} id    Rule id.
+	 * @param {Object} stats Response of plclean_stats.
+	 */
+	function showCounted( id, stats ) {
+		const source = sources[ id ];
+		const parts = cardParts( id );
+		const hadFocus = parts.$count.is( document.activeElement );
+		parts.$count.removeAttr( 'tabindex' );
+		source.count = Math.max( 0, parseInt( stats.count, 10 ) || 0 );
+		source.size = Math.max( 0, parseInt( stats.size, 10 ) || 0 );
+		parts.$source.removeClass( 'is-counting is-count-error' ).toggleClass( 'is-clean', 0 === source.count );
+		parts.$source.find( '.plclean-card-stats' ).attr( 'aria-busy', 'false' );
+		parts.$source.find( '.plclean-count-error' ).remove();
+		parts.$card.attr( { 'data-count': source.count, 'data-size': source.size } );
+		source.parts = readParts( stats.parts );
+		parts.$count.prop( 'hidden', false );
+		if ( source.parts ) {
+			showCountParts( parts.$count, source );
+		} else {
+			parts.$count.each( function () {
+				if ( this.plcleanFrame ) {
+					window.cancelAnimationFrame( this.plcleanFrame );
+				}
+				this.plcleanValue = source.count;
+				this.textContent = fmt( source.count );
+			} );
+		}
+		parts.$select.prop( 'disabled', 0 === source.count );
+		parts.$one.prop( 'disabled', 0 === source.count );
+		if ( 0 === source.count ) {
+			// Nothing to clean: no size on the card's face (Details still lists the tables' sizes).
+			parts.$size.remove();
+		}
+		renderTables( id, stats.tables );
+		if ( hadFocus ) {
+			( parts.$select.prop( 'disabled' ) ? parts.$source.find( '.plclean-details-toggle' ) : parts.$select ).trigger( 'focus' );
+		}
+	}
+
+	/**
+	 * A count failed: "Couldn't count — Retry". The source stays unselectable until it is counted.
+	 *
+	 * @param {string} id Rule id.
+	 */
+	function showCountError( id ) {
+		const parts = cardParts( id );
+		const hadFocus = parts.$count.is( document.activeElement );
+		parts.$count.removeAttr( 'tabindex' );
+		parts.$source.removeClass( 'is-counting' ).addClass( 'is-count-error' );
+		parts.$source.find( '.plclean-card-stats' ).attr( 'aria-busy', 'false' );
+		parts.$count.text( '' ).prop( 'hidden', true );
+		parts.$source.find( '.plclean-count-error' ).remove();
+		const $retry = $( '<button type="button" class="button-link plclean-count-retry"></button>' )
+			.attr( 'data-rule', id )
+			.attr( 'aria-describedby', 'plclean-title-' + id )
+			.text( __( 'Retry', 'log-broom' ) );
+		$( '<span class="plclean-count-error"></span>' )
+			.append( icon( 'warning' ), $( '<span>' ).text( __( "Couldn't count", 'log-broom' ) ), document.createTextNode( ' — ' ), $retry )
+			.insertBefore( parts.$source.find( '.plclean-card-clean' ) );
+		if ( hadFocus ) {
+			$retry.trigger( 'focus' );
+		}
+	}
+
+	/** Send stats requests while fewer than COUNT_CONCURRENCY are in flight. */
+	function pumpCounts() {
+		while ( counting.active < COUNT_CONCURRENCY && counting.queue.length ) {
+			const id = counting.queue.shift();
+			counting.active++;
+			post( 'plclean_stats', { rule: id } )
+				.then( ( stats ) => showCounted( id, stats ) )
+				.catch( () => showCountError( id ) )
+				.catch( () => {} )
+				.then( () => {
+					// Always: free the slot and go on, even if showing a result failed.
+					counting.active--;
+					try {
+						renderSizes();
+						renderSummary();
+						updateSelection();
+					} finally {
+						pumpCounts();
+					}
+				} );
+		}
+	}
+
+	/**
+	 * Ask for the count of the given sources (queued behind any requests already waiting).
+	 *
+	 * @param {string[]} ids Rule ids.
+	 */
+	function countSources( ids ) {
+		ids.forEach( ( id ) => {
+			if ( counting.queue.indexOf( id ) < 0 ) {
+				showCounting( id );
+				counting.queue.push( id );
+			}
+		} );
+		renderSummary();
+		pumpCounts();
 	}
 
 	/* ---------------------------------------------------------------------------------------------
@@ -545,6 +807,27 @@
 	 * Clean: confirm, progress, paused, success
 	 * ------------------------------------------------------------------------------------------- */
 
+	/** Sources that hold security or activity history, which some sites keep for audits. */
+	const AUDIT_SOURCES = [ 'wp_activity_log', 'wordfence', 'solid_security' ];
+
+	/**
+	 * The dialog line shown when the selection includes security or activity history, or null. For Solid Security
+	 * it also says that its unread alerts and last site-scan result are cleared.
+	 *
+	 * @param {string[]} ids Selected rule ids.
+	 * @return {?jQuery} Line.
+	 */
+	function auditNote( ids ) {
+		if ( ! ids.some( ( id ) => AUDIT_SOURCES.indexOf( id ) >= 0 ) ) {
+			return null;
+		}
+		const parts = [ __( 'Includes security or activity history. Some sites keep this for audits.', 'log-broom' ) ];
+		if ( ids.indexOf( 'solid_security' ) >= 0 && sources.solid_security && sources.solid_security.details_note ) {
+			parts.push( String( sources.solid_security.details_note ) );
+		}
+		return $( '<p class="plclean-dialog-note plclean-dialog-audit"></p>' ).append( icon( 'info-outline' ), $( '<span>' ).text( parts.join( ' ' ) ) );
+	}
+
 	/**
 	 * Open the backup confirmation dialog for the given sources.
 	 *
@@ -596,6 +879,10 @@
 					)
 				)
 			);
+		}
+		const audit = auditNote( ids );
+		if ( audit ) {
+			body.push( audit );
 		}
 		body.push( undoWarning(), confirmBox( __( 'I have a recent backup of my database and know how to restore it.', 'log-broom' ), $delete ) );
 
@@ -652,7 +939,8 @@
 
 	/**
 	 * Next automatic batch size (same rule as the server's scheduled cleaning): double after a full batch that
-	 * took under a second, halve after one that took over three seconds, otherwise keep it.
+	 * took under a second, halve after one that took over three seconds, otherwise keep it. A batch is full when it
+	 * deleted at least its limit (an Action Scheduler batch counts actions and also deletes their log entries).
 	 *
 	 * @param {string} id      Rule id.
 	 * @param {number} limit   Limit used.
@@ -661,7 +949,7 @@
 	 * @return {number} Next limit.
 	 */
 	function nextLimit( id, limit, deleted, elapsed ) {
-		if ( elapsed < FAST_BATCH && deleted === limit ) {
+		if ( elapsed < FAST_BATCH && deleted >= limit ) {
 			return Math.min( sources[ id ].max_batch_size, limit * 2 );
 		}
 		if ( elapsed > SLOW_BATCH ) {
@@ -698,6 +986,7 @@
 			stalled: [],
 			skipped: [],
 			skippedWhy: {}, // Error code per skipped source: unavailable | network_only.
+			stalledWhy: {}, // Plain-text reason per stalled source, when the server gave one.
 			cleaned: [],
 			touched: {}, // Per source: tables its batches deleted from (sent to plclean_optimize).
 			limit: {},
@@ -897,7 +1186,19 @@
 			return;
 		}
 		let text;
-		if ( 'fixed' === run.mode ) {
+		if ( 'tasks' === sources[ id ].batch_unit ) {
+			text = 'fixed' === run.mode
+				? sprintf(
+					/* translators: %s: number of scheduled tasks per batch (their log entries are removed with them). */
+					_n( 'Batch: %s task (fixed)', 'Batch: %s tasks (fixed)', limit, 'log-broom' ),
+					fmt( limit )
+				)
+				: sprintf(
+					/* translators: %s: number of scheduled tasks per batch (their log entries are removed with them). */
+					_n( 'Batch: %s task (automatic)', 'Batch: %s tasks (automatic)', limit, 'log-broom' ),
+					fmt( limit )
+				);
+		} else if ( 'fixed' === run.mode ) {
 			text = sprintf(
 				/* translators: %s: number of entries per batch. */
 				_n( 'Batch: %s entry (fixed)', 'Batch: %s entries (fixed)', limit, 'log-broom' ),
@@ -1023,6 +1324,9 @@
 			run.removed[ id ] += deleted;
 			run.remaining[ id ] = remaining;
 			source.count = remaining;
+			if ( source.parts ) {
+				source.parts = readParts( result.parts ) || { tasks: 0, logs: remaining };
+			}
 			if ( undefined !== result.size ) {
 				source.size = parseInt( result.size, 10 ) || 0;
 			}
@@ -1042,6 +1346,9 @@
 
 			if ( result.stalled ) {
 				run.stalled.push( id );
+				if ( result.stall_reason ) {
+					run.stalledWhy[ id ] = String( result.stall_reason );
+				}
 			}
 			if ( result.done || result.stalled ) {
 				run.state[ id ] = result.stalled ? 'stalled' : 'done';
@@ -1208,7 +1515,7 @@
 						$( '<span>' ).append(
 							$( '<strong>' ).text( sources[ id ].label ),
 							' ',
-							document.createTextNode( __( "Some entries couldn't be deleted. Try again later.", 'log-broom' ) )
+							document.createTextNode( run.stalledWhy[ id ] || __( "Some entries couldn't be deleted. Try again later.", 'log-broom' ) )
 						)
 					)
 				);
@@ -1274,6 +1581,10 @@
 		$schedule.find( 'input[name="schedule"][value="' + currentSchedule + '"]' ).prop( 'checked', true );
 		$status.text( scheduleStatus( currentSchedule ) ).toggleClass( 'is-on', 'off' !== currentSchedule );
 		$status.prepend( 'off' !== currentSchedule ? icon( 'yes-alt' ) : null );
+		if ( 'off' === currentSchedule ) {
+			// Turning automatic cleaning off forgets the last run's error on the server too (sync( 'off' )).
+			$( '#plclean-last-error' ).remove();
+		}
 	}
 
 	let saving = false;
@@ -1682,6 +1993,13 @@
 
 	$app.on( 'change', '.plclean-card-select', updateSelection );
 
+	$app.on( 'click', '.plclean-count-retry', function ( event ) {
+		// The button sits inside the card's <label>: never let the click reach the checkbox.
+		event.preventDefault();
+		event.stopPropagation();
+		countSources( [ String( $( this ).attr( 'data-rule' ) ) ] );
+	} );
+
 	$cleanSelected.on( 'click', function () {
 		openCleanDialog( selectedIds(), this );
 	} );
@@ -1697,17 +2015,8 @@
 		}
 	} );
 
-	// Initial state.
-	Object.keys( sources ).forEach( ( id ) => {
-		if ( sources[ id ].available && 0 === sources[ id ].count ) {
-			cardParts( id ).$source.addClass( 'is-clean' );
-		}
-		cardParts( id ).$count.each( function () {
-			this.plcleanValue = sources[ id ].count;
-		} );
-	} );
+	// Initial state: the page opens at once; each source's count follows.
 	applySchedule();
 	updateSelection();
-	const totalCount = ( data.totals && data.totals.count ) || 0;
-	animateNumber( $app.find( '.plclean-summary-count-value' ), totalCount, 700, 0, renderSummaryCount );
+	countSources( $app.find( '.plclean-source' ).map( ( i, el ) => el.getAttribute( 'data-rule' ) ).get().filter( ( id ) => sources[ id ] && sources[ id ].available ) );
 }( jQuery, window.wp ) );

@@ -40,6 +40,15 @@ class PLCLEAN_Rule_Rank_Math_404 extends PLCLEAN_Rule_Table {
 	}
 
 	/**
+	 * What the plugin cleans by itself (shown in Details).
+	 *
+	 * @return string
+	 */
+	public function builtin_note() {
+		return __( 'Rank Math only caps the number of 404 entries it keeps.', 'log-broom' );
+	}
+
+	/**
 	 * What is kept.
 	 *
 	 * @return string

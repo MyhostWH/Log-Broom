@@ -49,6 +49,15 @@ class PLCLEAN_Rule_WooCommerce_Log extends PLCLEAN_Rule_Table {
 	}
 
 	/**
+	 * What the plugin cleans by itself (shown in Details).
+	 *
+	 * @return string
+	 */
+	public function builtin_note() {
+		return __( 'WooCommerce deletes its own old logs (30 days by default).', 'log-broom' );
+	}
+
+	/**
 	 * What is kept.
 	 *
 	 * @return string
