@@ -1,0 +1,10 @@
+.superpowers/
+/vendor/
+composer.lock
+.phpunit.result.cache
+.phpcs.cache
+/.dev/
+/node_modules/
+/test-results/
+/playwright-report/
+/build/

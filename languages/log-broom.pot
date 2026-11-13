@@ -1,0 +1,704 @@
+# Copyright (C) 2026 MyHost
+# This file is distributed under the GPLv2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Log Broom 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/log-broom\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-11-12T22:29:04+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: log-broom\n"
+
+#. Plugin Name of the plugin
+#: log-broom.php
+#: includes/admin/class-plclean-admin.php:53
+#: includes/admin/class-plclean-admin.php:54
+#: includes/admin/views/page.php:38
+msgid "Log Broom"
+msgstr ""
+
+#. Description of the plugin
+#: log-broom.php
+msgid "Safely clean up log tables and clutter that plugins leave behind in your WordPress database."
+msgstr ""
+
+#. Author of the plugin
+#: log-broom.php
+msgid "MyHost"
+msgstr ""
+
+#. Author URI of the plugin
+#: log-broom.php
+msgid "https://myhost.co.il/"
+msgstr ""
+
+#: includes/admin/class-plclean-admin.php:97
+msgid "Only a network administrator can clean network-wide logs."
+msgstr ""
+
+#: includes/admin/class-plclean-admin.php:252
+msgid "You do not have permission to access this page."
+msgstr ""
+
+#: includes/admin/class-plclean-admin.php:266
+msgid "You do not have permission to do this."
+msgstr ""
+
+#: includes/admin/class-plclean-admin.php:283
+msgid "Unknown source."
+msgstr ""
+
+#: includes/admin/class-plclean-admin.php:292
+msgid "This source was not found on this site."
+msgstr ""
+
+#: includes/admin/class-plclean-admin.php:323
+msgid "Please confirm you have a database backup before cleaning."
+msgstr ""
+
+#: includes/admin/class-plclean-admin.php:380
+msgid "Please confirm you have regular automatic backups before turning on automatic cleaning."
+msgstr ""
+
+#: includes/admin/views/page.php:43
+msgid "Back up your database first."
+msgstr ""
+
+#: includes/admin/views/page.php:44
+msgid "Cleaning permanently deletes data and can't be undone."
+msgstr ""
+
+#: includes/admin/views/page.php:46
+msgid "How to back up WordPress"
+msgstr ""
+
+#: includes/admin/views/page.php:47
+msgid "(opens in a new tab)"
+msgstr ""
+
+#. translators: %s: data size, e.g. "1.4 GB".
+#: includes/admin/views/page.php:58
+#, php-format
+msgid "%s of log data found"
+msgstr ""
+
+#: includes/admin/views/page.php:60
+#: assets/js/admin.js:386
+msgid "Log data"
+msgstr ""
+
+#. translators: %s: number of entries.
+#: includes/admin/views/page.php:67
+#, php-format
+msgid "%s entry"
+msgid_plural "%s entries"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of sources.
+#: includes/admin/views/page.php:73
+#, php-format
+msgid "%s source"
+msgid_plural "%s sources"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/admin/views/page.php:81
+#: assets/js/admin.js:392
+msgid "Your database is tidy. None of the supported sources have anything to clean right now."
+msgstr ""
+
+#: includes/admin/views/page.php:86
+#: assets/js/admin.js:747
+msgid "Sources"
+msgstr ""
+
+#: includes/admin/views/page.php:106
+msgid "Nothing to clean"
+msgstr ""
+
+#: includes/admin/views/page.php:113
+msgid "Include in automatic cleaning"
+msgstr ""
+
+#: includes/admin/views/page.php:117
+msgid "Clean…"
+msgstr ""
+
+#: includes/admin/views/page.php:123
+#: assets/js/admin.js:1570
+msgid "Details"
+msgstr ""
+
+#: includes/admin/views/page.php:127
+msgid "Database tables"
+msgstr ""
+
+#: includes/admin/views/page.php:131
+msgid "Table"
+msgstr ""
+
+#: includes/admin/views/page.php:132
+msgid "Size on disk"
+msgstr ""
+
+#: includes/admin/views/page.php:150
+msgid "What's deleted"
+msgstr ""
+
+#: includes/admin/views/page.php:155
+msgid "What's kept"
+msgstr ""
+
+#: includes/admin/views/page.php:166
+msgid "None of the supported plugins were found on this site. Post revisions and expired transients can still be cleaned."
+msgstr ""
+
+#. translators: %s: number of sources.
+#: includes/admin/views/page.php:174
+#, php-format
+msgid "Network administrator only (%s)"
+msgstr ""
+
+#. translators: %s: number of sources.
+#: includes/admin/views/page.php:193
+#, php-format
+msgid "Not detected on this site (%s)"
+msgstr ""
+
+#: includes/admin/views/page.php:208
+msgid "Automatic cleaning"
+msgstr ""
+
+#: includes/admin/views/page.php:210
+msgid "Off"
+msgstr ""
+
+#: includes/admin/views/page.php:211
+msgid "Daily"
+msgstr ""
+
+#: includes/admin/views/page.php:212
+msgid "Weekly"
+msgstr ""
+
+#: includes/admin/views/page.php:213
+msgid "Optimize tables"
+msgstr ""
+
+#: includes/admin/views/page.php:216
+msgid "Only the sources switched on under \"Include in automatic cleaning\" are cleaned."
+msgstr ""
+
+#: includes/admin/views/page.php:219
+msgid "Optimize tables only rebuilds tables where entries were removed. Automatic cleaning never rebuilds WordPress core tables."
+msgstr ""
+
+#: includes/admin/views/page.php:225
+#: assets/js/admin.js:1210
+msgid "Automatic cleaning is on. It runs daily."
+msgstr ""
+
+#: includes/admin/views/page.php:227
+#: assets/js/admin.js:1210
+msgid "Automatic cleaning is on. It runs weekly."
+msgstr ""
+
+#. translators: 1: date, 2: number of entries removed.
+#: includes/admin/views/page.php:231
+#: assets/js/admin.js:1215
+#, php-format,js-format
+msgid "Last run: %1$s, removed %2$s entry."
+msgid_plural "Last run: %1$s, removed %2$s entries."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/admin/views/page.php:239
+msgid "Advanced"
+msgstr ""
+
+#: includes/admin/views/page.php:241
+msgid "Entries per batch"
+msgstr ""
+
+#: includes/admin/views/page.php:243
+msgid "Automatic (recommended)"
+msgstr ""
+
+#: includes/admin/views/page.php:245
+msgid "Fixed:"
+msgstr ""
+
+#: includes/admin/views/page.php:246
+msgid "Fixed number of entries per batch"
+msgstr ""
+
+#: includes/admin/views/page.php:250
+msgid "Use a number from 1,000 to 100,000. Other values are adjusted to fit."
+msgstr ""
+
+#: includes/admin/views/page.php:251
+msgid "Larger batches clean faster but can time out on slower hosting. Applies to plugin log tables; post revisions and transients always use safe sizes."
+msgstr ""
+
+#. translators: 1: number of selected sources, 2: number of entries.
+#: includes/admin/views/page.php:260
+#: assets/js/admin.js:297
+#, php-format,js-format
+msgid "%1$s selected · %2$s entry"
+msgid_plural "%1$s selected · %2$s entries"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/admin/views/page.php:265
+msgid "Clean selected…"
+msgstr ""
+
+#: includes/rules/abstract-class-plclean-rule.php:138
+msgid "Cleaned. Space on disk is given back when tables are optimized."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-action-scheduler.php:30
+msgid "Action Scheduler: finished actions and logs"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-action-scheduler.php:39
+msgid "Deletes completed, canceled and failed scheduled actions and their log entries."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-action-scheduler.php:48
+msgid "Cleaned. Space on disk is given back when tables are optimized. The size includes pending tasks, which are kept."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-action-scheduler.php:57
+msgid "pending tasks"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-rank-math-404.php:30
+msgid "Rank Math: 404 monitor log"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-rank-math-404.php:39
+msgid "Deletes the 404 errors recorded by the Rank Math 404 monitor."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-rank-math-404.php:48
+msgid "your redirections and SEO settings"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-redirection.php:30
+msgid "Redirection: 404 and redirect logs"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-redirection.php:39
+msgid "Deletes the redirect hit log and the 404 error log of the Redirection plugin."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-redirection.php:48
+msgid "your redirects"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-revisions.php:30
+msgid "Post revisions"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-revisions.php:39
+msgid "Deletes old saved versions (revisions) of posts and pages."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-revisions.php:57
+msgid "posts, pages and autosaves"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-revisions.php:84
+msgid "Shared WordPress tables — only revision rows are removed."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-solid-security.php:30
+msgid "Solid Security: logs and expired lockouts"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-solid-security.php:39
+msgid "Deletes the Solid Security event log, temporary attempt records and lockouts that have already expired."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-solid-security.php:48
+msgid "active lockouts"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-transients.php:30
+msgid "Expired transients"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-transients.php:39
+msgid "Deletes temporary cached values (transients) that have already expired."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-transients.php:57
+msgid "unexpired transients"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-transients.php:84
+msgid "Shared WordPress tables — only expired transients are removed."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-woocommerce-log.php:30
+msgid "WooCommerce: database log"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-woocommerce-log.php:39
+msgid "Deletes the log entries WooCommerce stores in its database table. Only used when WooCommerce log storage is set to Database."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-woocommerce-log.php:48
+msgid "WooCommerce stores logs as files by default (wp-content/uploads/wc-logs). Log Broom cleans the database only. Manage log files in WooCommerce → Status → Logs."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-woocommerce-log.php:57
+msgid "orders, products and settings"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-wordfence.php:30
+msgid "Wordfence: traffic, login and scan logs"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-wordfence.php:39
+msgid "Deletes the Wordfence live traffic, login attempt, scan activity and scan scratch data tables."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-wordfence.php:48
+msgid "Wordfence settings, blocked IPs and 2FA"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-wp-activity-log.php:30
+msgid "WP Activity Log: event log"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-wp-activity-log.php:39
+msgid "Deletes the recorded events and their details from the WP Activity Log tables."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-wp-activity-log.php:48
+msgid "activity log settings"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-wp-mail-smtp.php:30
+msgid "WP Mail SMTP: debug events"
+msgstr ""
+
+#: includes/rules/class-plclean-rule-wp-mail-smtp.php:39
+msgid "Deletes the debug events recorded by WP Mail SMTP."
+msgstr ""
+
+#: includes/rules/class-plclean-rule-wp-mail-smtp.php:48
+msgid "mailer settings and queued emails"
+msgstr ""
+
+#: assets/js/admin.js:73
+msgctxt "unit symbol: bytes"
+msgid "B"
+msgstr ""
+
+#: assets/js/admin.js:74
+msgctxt "unit symbol: kilobytes"
+msgid "KB"
+msgstr ""
+
+#: assets/js/admin.js:75
+msgctxt "unit symbol: megabytes"
+msgid "MB"
+msgstr ""
+
+#: assets/js/admin.js:76
+msgctxt "unit symbol: gigabytes"
+msgid "GB"
+msgstr ""
+
+#: assets/js/admin.js:77
+msgctxt "unit symbol: terabytes"
+msgid "TB"
+msgstr ""
+
+#. translators: 1: number, 2: unit symbol, e.g. "180 MB".
+#: assets/js/admin.js:86
+#, js-format
+msgid "%1$s %2$s"
+msgstr ""
+
+#: assets/js/admin.js:224
+msgid "Your session expired. Reload the page and try again."
+msgstr ""
+
+#: assets/js/admin.js:434
+#: assets/js/admin.js:1042
+#: assets/js/admin.js:1179
+msgid "Close"
+msgstr ""
+
+#: assets/js/admin.js:504
+msgid "This can't be undone. The only way to get this data back is from a database backup."
+msgstr ""
+
+#. translators: 1: source name, 2: number of entries, 3: data size.
+#: assets/js/admin.js:531
+#, js-format
+msgid "%1$s: %2$s entry (%3$s)"
+msgid_plural "%1$s: %2$s entries (%3$s)"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: source name, 2: number of entries.
+#: assets/js/admin.js:538
+#, js-format
+msgid "%1$s: %2$s entry"
+msgid_plural "%1$s: %2$s entries"
+msgstr[0] ""
+msgstr[1] ""
+
+#: assets/js/admin.js:549
+msgid "Delete log data"
+msgstr ""
+
+#: assets/js/admin.js:550
+msgid "Cancel, keep data"
+msgstr ""
+
+#: assets/js/admin.js:552
+msgid "This will delete:"
+msgstr ""
+
+#. translators: %s: what is kept, e.g. "pending tasks".
+#: assets/js/admin.js:559
+#, js-format
+msgid "Kept: %s"
+msgstr ""
+
+#: assets/js/admin.js:559
+msgctxt "list separator"
+msgid ", "
+msgstr ""
+
+#: assets/js/admin.js:564
+msgid "I have a recent backup of my database and know how to restore it."
+msgstr ""
+
+#. translators: %s: number of entries.
+#: assets/js/admin.js:571
+#, js-format
+msgid "Permanently delete %s log entry?"
+msgid_plural "Permanently delete %s log entries?"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: source name, 2: number of entries removed.
+#: assets/js/admin.js:724
+#, js-format
+msgid "%1$s — %2$s removed"
+msgstr ""
+
+#. translators: 1: source name, 2: entries removed so far, 3: total entries for this source.
+#: assets/js/admin.js:727
+#, js-format
+msgid "%1$s — %2$s of %3$s"
+msgstr ""
+
+#. translators: %s: source name.
+#: assets/js/admin.js:730
+#, js-format
+msgid "%s — some entries couldn't be deleted"
+msgstr ""
+
+#. translators: %s: source name.
+#: assets/js/admin.js:733
+#, js-format
+msgid "%s — skipped (not available)"
+msgstr ""
+
+#. translators: %s: source name.
+#: assets/js/admin.js:736
+#, js-format
+msgid "%s — waiting"
+msgstr ""
+
+#: assets/js/admin.js:797
+msgid "less than a minute left"
+msgstr ""
+
+#. translators: %s: number of minutes.
+#: assets/js/admin.js:803
+#, js-format
+msgid "about %s min left"
+msgid_plural "about %s min left"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: number of hours, 2: number of minutes.
+#: assets/js/admin.js:810
+#, js-format
+msgid "about %1$s h %2$s min left"
+msgid_plural "about %1$s h %2$s min left"
+msgstr[0] ""
+msgstr[1] ""
+
+#: assets/js/admin.js:828
+msgid "Estimating time left…"
+msgstr ""
+
+#. translators: 1: entries removed per second, 2: time left, e.g. "about 2 min left".
+#: assets/js/admin.js:840
+#, js-format
+msgid "≈ %1$s entries/sec · %2$s"
+msgstr ""
+
+#. translators: %s: number of entries per batch.
+#: assets/js/admin.js:865
+#, js-format
+msgid "Batch: %s entry (fixed)"
+msgid_plural "Batch: %s entries (fixed)"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of entries per batch.
+#: assets/js/admin.js:871
+#, js-format
+msgid "Batch: %s entry (automatic)"
+msgid_plural "Batch: %s entries (automatic)"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: entries removed so far, 2: total entries.
+#: assets/js/admin.js:904
+#, js-format
+msgid "Cleaning… %1$s of %2$s removed"
+msgstr ""
+
+#: assets/js/admin.js:913
+msgid "Cleaning progress"
+msgstr ""
+
+#: assets/js/admin.js:922
+msgid "Keep this tab open. Large logs can take a few minutes."
+msgstr ""
+
+#. translators: %s: source name.
+#: assets/js/admin.js:950
+#, js-format
+msgid "Now cleaning: %s"
+msgstr ""
+
+#: assets/js/admin.js:1011
+msgid "Optimizing tables…"
+msgstr ""
+
+#: assets/js/admin.js:1049
+msgid "Anything already removed stays removed."
+msgstr ""
+
+#: assets/js/admin.js:1052
+msgid "Reload page"
+msgstr ""
+
+#. translators: %s: source name.
+#: assets/js/admin.js:1059
+#, js-format
+msgid "The server stopped responding while cleaning %s, probably a timeout. Anything already removed stays removed."
+msgstr ""
+
+#. translators: %s: source name.
+#: assets/js/admin.js:1067
+#, js-format
+msgid "Cleaning %s stopped. Anything already removed stays removed."
+msgstr ""
+
+#. translators: %s: source name.
+#: assets/js/admin.js:1074
+#, js-format
+msgid "The server sent an unexpected answer while cleaning %s. Anything already removed stays removed."
+msgstr ""
+
+#: assets/js/admin.js:1082
+msgid "Try a smaller batch size in Advanced settings."
+msgstr ""
+
+#: assets/js/admin.js:1087
+msgid "Resume cleaning"
+msgstr ""
+
+#: assets/js/admin.js:1095
+#: assets/js/admin.js:1103
+msgid "Cleaning paused"
+msgstr ""
+
+#. translators: 1: number of entries, 2: data size.
+#: assets/js/admin.js:1124
+#, js-format
+msgid "Done! Removed %1$s entry and freed about %2$s."
+msgid_plural "Done! Removed %1$s entries and freed about %2$s."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of entries.
+#: assets/js/admin.js:1130
+#, js-format
+msgid "Done! Removed %s entry."
+msgid_plural "Done! Removed %s entries."
+msgstr[0] ""
+msgstr[1] ""
+
+#: assets/js/admin.js:1146
+msgid "Not cleaned: only a network administrator can clean network-wide logs."
+msgstr ""
+
+#: assets/js/admin.js:1147
+msgid "Not cleaned: this source is no longer on this site."
+msgstr ""
+
+#: assets/js/admin.js:1164
+msgid "Some entries couldn't be deleted. Try again later."
+msgstr ""
+
+#: assets/js/admin.js:1175
+msgid "Tip: turn on 'Optimize tables' to give the freed space back to your server."
+msgstr ""
+
+#: assets/js/admin.js:1299
+msgid "Saved"
+msgstr ""
+
+#: assets/js/admin.js:1304
+#: assets/js/admin.js:1489
+msgid "Could not save. Please try again."
+msgstr ""
+
+#: assets/js/admin.js:1438
+msgid "Turn on automatic cleaning"
+msgstr ""
+
+#: assets/js/admin.js:1439
+msgid "Cancel"
+msgstr ""
+
+#: assets/js/admin.js:1451
+msgid "Turn on automatic cleaning?"
+msgstr ""
+
+#: assets/js/admin.js:1458
+msgid "Every day, the sources you include are cleaned without asking again."
+msgstr ""
+
+#: assets/js/admin.js:1459
+msgid "Every week, the sources you include are cleaned without asking again."
+msgstr ""
+
+#: assets/js/admin.js:1462
+msgid "I have regular automatic backups of my database."
+msgstr ""
+
+#: assets/js/admin.js:1570
+msgid "Hide details"
+msgstr ""
