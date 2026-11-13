@@ -29,7 +29,7 @@ Sources from other plugins appear only when that plugin's tables exist on your s
 * Rank Math 404 monitor: deletes the recorded 404 errors. Your redirections and SEO settings are kept.
 * WP Mail SMTP debug events: deletes the recorded debug events. Mailer settings and queued emails are kept.
 * WP Activity Log: deletes the recorded events and their details. Activity log settings are kept.
-* Wordfence: deletes the live traffic, login attempt, scan activity and scan scratch data tables. Wordfence settings, blocked IPs and 2FA are kept.
+* Wordfence: deletes live traffic older than 24 hours, failed login attempts and the scan activity log. Wordfence settings, blocked IPs, 2FA, successful logins (Wordfence uses them to recognise trusted IPs), the last 24 hours of traffic, scan results and scan working data are kept.
 * Action Scheduler (used by WooCommerce and other plugins): deletes completed, canceled and failed actions and their log entries. Pending and in-progress tasks are kept.
 * Solid Security: deletes the event log, attempt counters older than one day, and lockouts that expired before its "Days to Remember Lockouts" period (default 7 days), matching Solid Security's own cleanup. Active lockouts, recent lockouts used for repeat-offender bans, attempt counters from the last day and bans are kept.
 
