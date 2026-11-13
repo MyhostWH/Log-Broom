@@ -84,12 +84,13 @@ abstract class PLCLEAN_Rule_Table extends PLCLEAN_Rule {
 	}
 
 	/**
-	 * Available when any spec table exists (and, for network-wide tables, only on the main site).
+	 * Available when any spec table exists. Network-wide tables (base prefix) are shared by every site of every
+	 * network, so on multisite they are only available on the main site of the main network.
 	 *
 	 * @return bool
 	 */
 	public function is_available() {
-		if ( $this->has_global_spec() && is_multisite() && ! is_main_site() ) {
+		if ( $this->has_global_spec() && is_multisite() && ( ! is_main_site() || ! is_main_network() ) ) {
 			return false;
 		}
 		return array() !== $this->resolved();

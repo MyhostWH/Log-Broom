@@ -85,14 +85,18 @@ class PLCLEAN_Rule_Transients extends PLCLEAN_Rule {
 	}
 
 	/**
-	 * Tables touched.
+	 * Tables touched, as shown in Details and allowed for "Optimize tables".
+	 *
+	 * The network table sitemeta is listed only for network administrators (on the main site of the main
+	 * network), so a site administrator can never rebuild it. Expired site transients in sitemeta are still
+	 * deleted by count()/clean_batch() through core's delete_expired_transients(), as core's own cron does.
 	 *
 	 * @return string[]
 	 */
 	public function tables() {
 		global $wpdb;
 		$tables = array( $wpdb->options );
-		if ( is_multisite() && is_main_site() && is_main_network() ) {
+		if ( is_multisite() && is_main_site() && is_main_network() && current_user_can( 'manage_network_options' ) ) {
 			$tables[] = $wpdb->sitemeta;
 		}
 		return $tables;
