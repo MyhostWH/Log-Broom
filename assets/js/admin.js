@@ -193,7 +193,8 @@
 	 * Classify a failed request.
 	 *
 	 * `kind` is one of:
-	 * - 'session': the nonce check failed (core answers `-1`, HTTP 403): the page must be reloaded;
+	 * - 'session': the nonce check failed (core answers `-1`, HTTP 403), or the user is no longer logged in
+	 *   (admin-ajax.php answers `0`, HTTP 400): the page must be reloaded;
 	 * - 'unavailable': the source can't be cleaned here: it is no longer on this site (HTTP 400, code
 	 *   `unavailable`), or it is network-wide and only a network administrator may clean it (HTTP 403, code
 	 *   `network_only`);
@@ -212,7 +213,7 @@
 		const code = payload.code ? String( payload.code ) : '';
 		const body = 'string' === typeof text ? text.trim() : '';
 		let kind = 'unknown';
-		if ( -1 === json || '-1' === body || ( 403 === status && ! message ) ) {
+		if ( -1 === json || '-1' === body || 0 === json || '0' === body || ( 403 === status && ! message ) ) {
 			kind = 'session';
 		} else if ( 'unavailable' === code || 'network_only' === code ) {
 			kind = 'unavailable';
