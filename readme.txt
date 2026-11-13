@@ -88,7 +88,7 @@ No. See the Privacy section.
 
 == Privacy ==
 
-Log Broom does not collect, store or send any personal data, makes no external requests, and loads no assets from other servers. It stores only its own settings, the time and number of entries of the last cleaning run, and small internal values used while an automatic cleaning run is in progress (the names of the database tables waiting to be optimized and the running total of entries removed), and, if the last automatic run hit database errors, the error messages, the sources they came from and the number of retries so far, in your site's options table. None of this is personal data, and all of it is removed when you delete the plugin.
+Log Broom does not collect, store or send any personal data, makes no external requests, and loads no assets from other servers. It stores only its own settings, the time and number of entries of the last cleaning run, and small internal values used while an automatic cleaning run is in progress (the names of the database tables waiting to be optimized and the running total of entries removed), and, if the last automatic run hit database errors, the error messages, the sources they came from and the number of retries so far, and the names of the tables you optimized in the last 10 minutes with the time of each, in your site's options table (on multisite, the optimize times are kept in the network's options). None of this is personal data, and all of it is removed when you delete the plugin.
 
 == Changelog ==
 
@@ -96,6 +96,7 @@ Log Broom does not collect, store or send any personal data, makes no external r
 * Automatic cleaning retries database errors with growing wait times and keeps cleaning the other sources.
 * More accurate size figures after cleaning; clearer message when Optimize is off.
 * Fixed a progress number that could be out of date for one batch.
+* Safer Optimize: limits for large and shared tables, and a once-per-10-minutes guard.
 
 = 1.0.1 =
 * Safer Solid Security cleaning: keeps the data Solid Security uses for repeat-offender bans and attempt limits (recent lockouts and the last day of attempt counters). Thanks to Yossi Gueta.
