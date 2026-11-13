@@ -1,0 +1,17 @@
+{
+    "name": "myhostwh/log-broom",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "require": {},
+    "config": {
+        "allow-plugins": {
+            "roots/wordpress-core-installer": true
+        }
+    },
+    "require-dev": {
+        "wp-phpunit/wp-phpunit": "^7.1",
+        "roots/wordpress-no-content": "^7.1",
+        "yoast/phpunit-polyfills": "^4.0",
+        "phpunit/phpunit": "^9.6"
+    }
+}
