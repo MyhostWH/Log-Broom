@@ -982,7 +982,6 @@
 			index: 0,
 			deleted: 0,
 			remaining: {},
-			startSize: {},
 			stalled: [],
 			skipped: [],
 			skippedWhy: {}, // Why each source was skipped: unavailable | network_only | error (skipped after database errors).
@@ -1001,7 +1000,6 @@
 		};
 		ids.forEach( ( id ) => {
 			run.remaining[ id ] = sources[ id ].count;
-			run.startSize[ id ] = sources[ id ].size;
 			run.limit[ id ] = firstLimit( id );
 			run.removed[ id ] = 0;
 			run.touched[ id ] = [];
@@ -1363,19 +1361,27 @@
 			}
 		}
 
-		if ( $schedule.find( 'input[name="optimize"]' ).prop( 'checked' ) ) {
-			for ( const id of run.cleaned ) {
-				// Only the tables entries were removed from; the server ignores any that are not this source's.
-				if ( ! run.touched[ id ].length ) {
-					continue;
+		// Current sizes: the server analyzes (and, with "Optimize tables" on, optimizes) the tables entries were removed
+		// from, once per source, and measures the space optimizing gave back.
+		run.optimize = $schedule.find( 'input[name="optimize"]' ).prop( 'checked' );
+		run.optimized = false;
+		run.freed = 0;
+		for ( const id of run.cleaned ) {
+			// Only the tables entries were removed from; the server ignores any that are not this source's.
+			if ( ! run.touched[ id ].length ) {
+				continue;
+			}
+			renderProgress( run, run.optimize ? __( 'Optimizing tables…', 'log-broom' ) : __( 'Updating table sizes…', 'log-broom' ) );
+			try {
+				const result = await post( run.optimize ? 'plclean_optimize' : 'plclean_analyze', { rule: id, tables: run.touched[ id ] } );
+				sources[ id ].size = parseInt( result.size, 10 ) || 0;
+				renderTables( id, result.tables );
+				if ( run.optimize ) {
+					run.optimized = true;
+					run.freed += Math.max( 0, parseInt( result.freed, 10 ) || 0 );
 				}
-				renderProgress( run, __( 'Optimizing tables…', 'log-broom' ) );
-				try {
-					const result = await post( 'plclean_optimize', { rule: id, tables: run.touched[ id ] } );
-					sources[ id ].size = parseInt( result.size, 10 ) || 0;
-				} catch ( error ) {
-					// Optimizing is a bonus; the entries are already removed.
-				}
+			} catch ( error ) {
+				// Optimizing and fresh sizes are a bonus; the entries are already removed.
 			}
 		}
 
@@ -1510,7 +1516,9 @@
 		renderSummary();
 		updateSelection();
 
-		const freed = run.queue.reduce( ( sum, id ) => sum + Math.max( 0, run.startSize[ id ] - sources[ id ].size ), 0 );
+		// "Freed" only when tables were optimized, measured on the server before and after: without optimizing, the
+		// database keeps the space for new rows and the disk use does not change.
+		const freed = run.optimized ? run.freed : 0;
 		const n = run.deleted;
 		const title = freed > 0
 			? sprintf(
@@ -1558,11 +1566,12 @@
 			} );
 			body.push( $list );
 		}
-		if ( ! $schedule.find( 'input[name="optimize"]' ).prop( 'checked' ) ) {
+		const note = ! run.optimize && n > 0 ? __( 'The database reuses this space for new data; turn on “Optimize tables” to return it to the disk.', 'log-broom' ) : '';
+		if ( note ) {
 			body.push(
 				$( '<p class="plclean-tip"></p>' ).append(
 					icon( 'lightbulb' ),
-					$( '<span>' ).text( __( "Tip: turn on 'Optimize tables' to give the freed space back to your server.", 'log-broom' ) )
+					$( '<span>' ).text( note )
 				)
 			);
 		}
@@ -1577,8 +1586,8 @@
 			focus: $done,
 		} );
 		$done.on( 'click', () => dialog.close() );
-		announce( title, true );
-		pageResult( title );
+		announce( note ? title + ' ' + note : title, true );
+		pageResult( note ? title + ' ' + note : title );
 	}
 
 	/* ---------------------------------------------------------------------------------------------

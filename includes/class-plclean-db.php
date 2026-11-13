@@ -173,6 +173,21 @@ class PLCLEAN_DB {
 	}
 
 	/**
+	 * Refresh a table's statistics (ANALYZE TABLE), so the sizes read afterwards are current. Cheap: InnoDB samples
+	 * a few index pages instead of reading the table.
+	 *
+	 * @param string $table Real table name from find_table().
+	 * @return void
+	 */
+	public static function analyze( $table ) {
+		global $wpdb;
+
+		// Table is resolved by find_table().
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$wpdb->query( "ANALYZE TABLE `{$table}`" );
+	}
+
+	/**
 	 * Optimize a table to reclaim space.
 	 *
 	 * @param string $table Real table name from find_table().

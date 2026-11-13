@@ -41,6 +41,7 @@ class PLCLEAN_Admin {
 		add_action( 'wp_ajax_plclean_stats', array( $this, 'ajax_stats' ) );
 		add_action( 'wp_ajax_plclean_clean', array( $this, 'ajax_clean' ) );
 		add_action( 'wp_ajax_plclean_optimize', array( $this, 'ajax_optimize' ) );
+		add_action( 'wp_ajax_plclean_analyze', array( $this, 'ajax_analyze' ) );
 		add_action( 'wp_ajax_plclean_save_settings', array( $this, 'ajax_save_settings' ) );
 	}
 
@@ -244,24 +245,9 @@ class PLCLEAN_Admin {
 	 *               'parts' => int[] (e.g. array( 'tasks' => n, 'logs' => n )) for rules that count in parts.
 	 */
 	public static function stats( PLCLEAN_Rule $rule ) {
-		$parts  = $rule->count_parts();
-		$count  = is_array( $parts ) ? (int) array_sum( $parts ) : (int) $rule->count();
-		$size   = (int) $rule->size();
-		$tables = array();
-		foreach ( $rule->table_details() as $table ) {
-			$table_size = null === $table['size'] ? null : (int) $table['size'];
-			$tables[]   = array(
-				'name'       => (string) $table['name'],
-				'size'       => $table_size,
-				'size_human' => null !== $table_size && $table_size > 0 ? size_format( $table_size ) : '',
-			);
-		}
-		$out = array(
-			'count'      => $count,
-			'size'       => $size,
-			'size_human' => $size > 0 ? size_format( $size ) : '',
-			'tables'     => $tables,
-		);
+		$parts = $rule->count_parts();
+		$count = is_array( $parts ) ? (int) array_sum( $parts ) : (int) $rule->count();
+		$out   = array_merge( array( 'count' => $count ), self::sizes( $rule ) );
 		if ( is_array( $parts ) ) {
 			$out['parts'] = array_map( 'intval', $parts );
 		}
@@ -423,16 +409,12 @@ class PLCLEAN_Admin {
 	}
 
 	/**
-	 * AJAX: optimize the posted tables of a rule (the tables its batches deleted from, as reported in
-	 * `tables_touched`). Only names that are exactly one of the rule's own tables() are optimized, so the
-	 * request can never name another table.
+	 * Table names posted as `tables[]` (strings only, sanitized). They are only ever compared with a rule's own
+	 * table names.
 	 *
-	 * @return void
+	 * @return string[]
 	 */
-	public function ajax_optimize() {
-		$this->guard();
-		$rule = $this->posted_rule();
-
+	private function posted_tables() {
 		$tables = array();
 		// Nonce verified in guard(); each name is only compared with the rule's own table names.
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
@@ -444,8 +426,81 @@ class PLCLEAN_Admin {
 			}
 		}
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
-		( new PLCLEAN_Cleaner() )->optimize_tables( $rule, $tables );
-		wp_send_json_success( array( 'size' => (int) $rule->size() ) );
+		return $tables;
+	}
+
+	/**
+	 * Sum of the current sizes of some tables, in bytes.
+	 *
+	 * @param string[] $tables Real table names.
+	 * @return int
+	 */
+	private static function tables_size( array $tables ) {
+		$size = 0;
+		foreach ( $tables as $table ) {
+			$size += PLCLEAN_DB::table_size( $table );
+		}
+		return $size;
+	}
+
+	/**
+	 * AJAX: after a manual clean without optimizing, refresh the statistics (ANALYZE TABLE) of the posted tables of a
+	 * rule (the tables its batches deleted from, as reported in `tables_touched`), then answer with its current sizes,
+	 * as plclean_stats does. Only names that are exactly one of the rule's own tables() are analyzed.
+	 *
+	 * @return void
+	 */
+	public function ajax_analyze() {
+		$this->guard();
+		$rule = $this->posted_rule();
+		( new PLCLEAN_Cleaner() )->analyze_tables( $rule, $this->posted_tables() );
+		wp_send_json_success( self::sizes( $rule ) );
+	}
+
+	/**
+	 * AJAX: optimize the posted tables of a rule (the tables its batches deleted from, as reported in
+	 * `tables_touched`). Only names that are exactly one of the rule's own tables() are optimized, so the
+	 * request can never name another table.
+	 *
+	 * The space freed is measured: the tables are analyzed and their size read before optimizing, and read again
+	 * after. The answer has the rule's sizes (as plclean_stats) plus 'freed' (bytes, never negative).
+	 *
+	 * @return void
+	 */
+	public function ajax_optimize() {
+		$this->guard();
+		$rule    = $this->posted_rule();
+		$cleaner = new PLCLEAN_Cleaner();
+		$tables  = $cleaner->analyze_tables( $rule, $this->posted_tables() );
+		$before  = self::tables_size( $tables );
+		$cleaner->optimize_tables( $rule, $tables );
+		$out          = self::sizes( $rule );
+		$out['freed'] = max( 0, $before - self::tables_size( $tables ) );
+		wp_send_json_success( $out );
+	}
+
+	/**
+	 * A rule's size and per-table sizes (Details), as plclean_stats reports them, without counting.
+	 *
+	 * @param PLCLEAN_Rule $rule Rule.
+	 * @return array array( 'size' => int, 'size_human' => string, 'tables' => array[] ).
+	 */
+	private static function sizes( PLCLEAN_Rule $rule ) {
+		$size   = (int) $rule->size();
+		$tables = array();
+		foreach ( $rule->table_details() as $table ) {
+			$table_size = null === $table['size'] ? null : (int) $table['size'];
+			$tables[]   = array(
+				'name'       => (string) $table['name'],
+				'size'       => $table_size,
+				'size_human' => null !== $table_size && $table_size > 0 ? size_format( $table_size ) : '',
+			);
+		}
+		return array(
+			'size'       => $size,
+			'size_human' => $size > 0 ? size_format( $size ) : '',
+			'tables'     => $tables,
+		);
 	}
 
 	/**

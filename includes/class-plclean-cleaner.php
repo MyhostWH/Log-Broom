@@ -385,6 +385,46 @@ class PLCLEAN_Cleaner {
 	}
 
 	/**
+	 * The names in a list that are exactly one of the rule's own tables(), each once, in the rule's order. The list
+	 * may come from untrusted input.
+	 *
+	 * @param PLCLEAN_Rule $rule   Rule.
+	 * @param array        $tables Wanted table names.
+	 * @return string[]
+	 */
+	public static function own_tables( PLCLEAN_Rule $rule, array $tables ) {
+		$wanted = array();
+		foreach ( $tables as $table ) {
+			if ( is_string( $table ) ) {
+				$wanted[] = $table;
+			}
+		}
+		$out = array();
+		foreach ( $rule->tables() as $table ) {
+			if ( in_array( (string) $table, $wanted, true ) && ! in_array( (string) $table, $out, true ) ) {
+				$out[] = (string) $table;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Refresh the statistics of some of a rule's tables (ANALYZE TABLE), once each, so the sizes read afterwards are
+	 * current. Only names that are exactly one of the rule's own tables() are analyzed.
+	 *
+	 * @param PLCLEAN_Rule $rule   Rule.
+	 * @param array        $tables Wanted table names (the tables a clean deleted from).
+	 * @return string[] The tables analyzed.
+	 */
+	public function analyze_tables( PLCLEAN_Rule $rule, array $tables ) {
+		$done = self::own_tables( $rule, $tables );
+		foreach ( $done as $table ) {
+			PLCLEAN_DB::analyze( $table );
+		}
+		return $done;
+	}
+
+	/**
 	 * Optimize some of a rule's tables. Only names that are exactly one of the rule's own tables() are
 	 * optimized, so the list may come from untrusted input.
 	 *
@@ -393,18 +433,9 @@ class PLCLEAN_Cleaner {
 	 * @return string[] The tables optimized.
 	 */
 	public function optimize_tables( PLCLEAN_Rule $rule, array $tables ) {
-		$wanted = array();
-		foreach ( $tables as $table ) {
-			if ( is_string( $table ) ) {
-				$wanted[] = $table;
-			}
-		}
-		$done = array();
-		foreach ( $rule->tables() as $table ) {
-			if ( in_array( (string) $table, $wanted, true ) && ! in_array( (string) $table, $done, true ) ) {
-				PLCLEAN_DB::optimize( $table );
-				$done[] = (string) $table;
-			}
+		$done = self::own_tables( $rule, $tables );
+		foreach ( $done as $table ) {
+			PLCLEAN_DB::optimize( $table );
 		}
 		return $done;
 	}
