@@ -130,6 +130,15 @@ abstract class PLCLEAN_Rule {
 	}
 
 	/**
+	 * Translated note shown under "What's deleted" in Details (empty when none).
+	 *
+	 * @return string
+	 */
+	public function details_note() {
+		return '';
+	}
+
+	/**
 	 * Translated note shown in Details once the source has nothing left to clean.
 	 *
 	 * @return string

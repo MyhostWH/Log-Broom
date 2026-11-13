@@ -207,6 +207,7 @@ class PLCLEAN_Admin {
 				'id'             => $rule->id(),
 				'label'          => $rule->label(),
 				'description'    => $rule->description(),
+				'details_note'   => $rule->details_note(),
 				'kept'           => $rule->kept(),
 				'core'           => $rule->is_core(),
 				'count'          => $rule_n,

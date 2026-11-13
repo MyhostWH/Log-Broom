@@ -8,7 +8,7 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Deletes post revisions, keeping autosaves and the posts themselves.
+ * Deletes post revisions, keeping autosaves, the posts themselves and the Site Editor's design history.
  */
 class PLCLEAN_Rule_Revisions extends PLCLEAN_Rule {
 
@@ -36,7 +36,7 @@ class PLCLEAN_Rule_Revisions extends PLCLEAN_Rule {
 	 * @return string
 	 */
 	public function description() {
-		return __( 'Deletes old saved versions (revisions) of posts and pages.', 'log-broom' );
+		return __( 'Deletes old saved versions (revisions) of posts, pages, products and other content.', 'log-broom' );
 	}
 
 	/**
@@ -54,7 +54,67 @@ class PLCLEAN_Rule_Revisions extends PLCLEAN_Rule {
 	 * @return string
 	 */
 	public function kept() {
-		return __( 'posts, pages and autosaves', 'log-broom' );
+		return __( 'autosaves; Site Editor history (styles, templates, navigation, patterns, custom CSS)', 'log-broom' );
+	}
+
+	/**
+	 * Extra note for the "What's deleted" part of Details.
+	 *
+	 * @return string
+	 */
+	public function details_note() {
+		return __( 'Includes revisions from page builders such as Elementor.', 'log-broom' );
+	}
+
+	/**
+	 * Post types whose revisions are always kept: the Site Editor's design history (Styles > Revisions,
+	 * template, navigation and pattern history, Additional CSS).
+	 *
+	 * Filterable through `plclean_revisions_excluded_types`; every entry is passed through sanitize_key().
+	 *
+	 * @return string[]
+	 */
+	public function excluded_types() {
+		$types = array( 'wp_global_styles', 'wp_template', 'wp_template_part', 'wp_navigation', 'wp_block', 'custom_css' );
+		/**
+		 * Filters the post types whose revisions Log Broom never deletes.
+		 *
+		 * @param string[] $types Post type names.
+		 */
+		$types = apply_filters( 'plclean_revisions_excluded_types', $types );
+		$out   = array();
+		foreach ( (array) $types as $type ) {
+			if ( ! is_string( $type ) ) {
+				continue;
+			}
+			$type = sanitize_key( $type );
+			if ( '' !== $type ) {
+				$out[] = $type;
+			}
+		}
+		return array_values( array_unique( $out ) );
+	}
+
+	/**
+	 * FROM/WHERE part shared by count() and clean_batch(), prepared: non-autosave revisions whose parent is
+	 * not of an excluded type. Revisions whose parent is missing (orphans) match.
+	 *
+	 * @return string
+	 */
+	private function revisions_sql() {
+		global $wpdb;
+		$types = $this->excluded_types();
+		$sql   = $wpdb->prepare(
+			"FROM {$wpdb->posts} r LEFT JOIN {$wpdb->posts} p ON p.ID = r.post_parent WHERE r.post_type = 'revision' AND r.post_name NOT LIKE %s",
+			$this->autosave_pattern()
+		);
+		if ( array() !== $types ) {
+			$placeholders = implode( ',', array_fill( 0, count( $types ), '%s' ) );
+			// One %s placeholder per type; the list is built from count( $types ).
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+			$sql .= $wpdb->prepare( " AND ( p.ID IS NULL OR p.post_type NOT IN ({$placeholders}) )", $types );
+		}
+		return $sql;
 	}
 
 	/**
@@ -105,19 +165,15 @@ class PLCLEAN_Rule_Revisions extends PLCLEAN_Rule {
 	}
 
 	/**
-	 * Number of non-autosave revisions.
+	 * Number of non-autosave revisions outside the Site Editor history.
 	 *
 	 * @return int
 	 */
 	public function count() {
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		return (int) $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'revision' AND post_name NOT LIKE %s",
-				$this->autosave_pattern()
-			)
-		);
+		// The fragment is prepared in revisions_sql().
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+		return (int) $wpdb->get_var( 'SELECT COUNT(*) ' . $this->revisions_sql() );
 	}
 
 	/**
@@ -135,16 +191,11 @@ class PLCLEAN_Rule_Revisions extends PLCLEAN_Rule {
 		$deleted = 0;
 		// shortcut: each batch re-tries blocked revisions from the start; store a cursor if sites block thousands.
 		$after = 0;
+		$from  = $this->revisions_sql();
 		while ( $deleted < $limit ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$ids = $wpdb->get_col(
-				$wpdb->prepare(
-					"SELECT ID FROM {$wpdb->posts} WHERE post_type = 'revision' AND post_name NOT LIKE %s AND ID > %d ORDER BY ID ASC LIMIT %d",
-					$this->autosave_pattern(),
-					$after,
-					$limit - $deleted
-				)
-			);
+			// $from is prepared in revisions_sql(); the cursor and limit are prepared here.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+			$ids = $wpdb->get_col( 'SELECT r.ID ' . $from . $wpdb->prepare( ' AND r.ID > %d ORDER BY r.ID ASC LIMIT %d', $after, $limit - $deleted ) );
 			if ( ! $ids ) {
 				break;
 			}

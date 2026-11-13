@@ -149,6 +149,9 @@ $plclean_has_data = $data['totals']['count'] > 0;
 							<div class="plclean-details-section">
 								<h3 class="plclean-details-heading"><?php esc_html_e( "What's deleted", 'log-broom' ); ?></h3>
 								<p><?php echo esc_html( $plclean_source['description'] ); ?></p>
+								<?php if ( '' !== $plclean_source['details_note'] ) : ?>
+									<p class="plclean-details-note plclean-deleted-note"><?php echo esc_html( $plclean_source['details_note'] ); ?></p>
+								<?php endif; ?>
 							</div>
 							<?php if ( '' !== $plclean_source['kept'] ) : ?>
 								<div class="plclean-details-section">

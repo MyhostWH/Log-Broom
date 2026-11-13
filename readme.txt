@@ -22,7 +22,7 @@ Find it under Tools > Log Broom.
 
 Sources from other plugins appear only when that plugin's tables exist on your site.
 
-* Post revisions: deletes old saved versions of posts and pages. Posts, pages and autosaves are kept.
+* Post revisions: deletes old saved versions (revisions) of posts, pages, products and other content, including revisions from page builders such as Elementor. Posts, pages, autosaves and the Site Editor's history (styles, templates, navigation, patterns, custom CSS) are kept.
 * Expired transients: deletes temporary cached values that have already expired. Unexpired transients are kept.
 * WooCommerce database log: deletes log entries stored in its database table. Orders, products and settings are kept.
 * Redirection: deletes the redirect hit log and the 404 error log. Your redirects are kept.
@@ -31,7 +31,7 @@ Sources from other plugins appear only when that plugin's tables exist on your s
 * WP Activity Log: deletes the recorded events and their details. Activity log settings are kept.
 * Wordfence: deletes live traffic older than 24 hours, failed login attempts and the scan activity log. Wordfence settings, blocked IPs, 2FA, successful logins (Wordfence uses them to recognise trusted IPs), the last 24 hours of traffic, scan results and scan working data are kept.
 * Action Scheduler (used by WooCommerce and other plugins): deletes completed, canceled and failed actions and their log entries. Pending and in-progress tasks are kept.
-* Solid Security: deletes the event log, attempt counters older than one day, and lockouts that expired before its "Days to Remember Lockouts" period (default 7 days), matching Solid Security's own cleanup. Active lockouts, recent lockouts used for repeat-offender bans, attempt counters from the last day and bans are kept.
+* Solid Security: deletes the whole event log, attempt counters older than one day, and lockouts that expired longer ago than the ban period ("Days to Remember Lockouts") plus one day (8 days by default). Attempt counters and lockouts follow the same retention as Solid Security's own cleanup. Active lockouts, recent lockouts used for repeat-offender bans, attempt counters from the last day and bans are kept.
 
 Plugin names are used only to describe what each source cleans. This plugin is not affiliated with or endorsed by them.
 
@@ -88,15 +88,18 @@ No. See the Privacy section.
 
 == Privacy ==
 
-Log Broom does not collect, store or send any personal data, makes no external requests, and loads no assets from other servers. It stores only its own settings and the time of the last cleaning run in your site's options table. Both are removed when you delete the plugin.
+Log Broom does not collect, store or send any personal data, makes no external requests, and loads no assets from other servers. It stores only its own settings, the time and number of entries of the last cleaning run, and small internal values used while an automatic cleaning run is in progress (the list of sources whose tables are waiting to be optimized and the running total of entries removed) in your site's options table. None of this is personal data, and all of it is removed when you delete the plugin.
 
 == Changelog ==
 
 = 1.0.1 =
+* Safer Solid Security cleaning: keeps the data Solid Security uses for repeat-offender bans and attempt limits (recent lockouts and the last day of attempt counters). Thanks to Yossi Gueta.
+* Safer Wordfence cleaning: keeps successful logins, scan results and scan working data, and the last 24 hours of traffic. Thanks to Yossi Gueta.
 * Fix: automatic cleaning no longer forgets sources whose plugin is temporarily inactive when you save settings.
 * Fix: saving settings no longer postpones the next automatic cleaning.
 * Fix: post revisions that another plugin protects no longer block cleaning of the rest.
-* Thanks to Yossi Gueta for the report and fixes.
+* Fix: "Last run" now counts every part of a long automatic cleaning run.
+* Fix: an expired login session during cleaning now asks you to reload the page; the fixed batch size is saved only when you finish typing, and choosing Automatic right after typing works; the summary wording, focus after cancelling, and the page without JavaScript are corrected.
 
 = 1.0.0 =
 * Initial release.
@@ -104,7 +107,7 @@ Log Broom does not collect, store or send any personal data, makes no external r
 == Upgrade Notice ==
 
 = 1.0.1 =
-Fixes settings saves that dropped sources of inactive plugins or delayed the next automatic cleaning, and protected revisions that blocked cleaning.
+Safety update: Solid Security and Wordfence cleaning now keep the data their brute-force protection, breached-password check and scans rely on. Also fixes settings saves, "Last run" totals and several admin page issues.
 
 = 1.0.0 =
 Initial release.
