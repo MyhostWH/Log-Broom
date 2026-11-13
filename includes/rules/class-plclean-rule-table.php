@@ -15,6 +15,13 @@ defined( 'ABSPATH' ) || exit;
 abstract class PLCLEAN_Rule_Table extends PLCLEAN_Rule {
 
 	/**
+	 * Real names of the tables the last clean_batch() call deleted rows from.
+	 *
+	 * @var string[]
+	 */
+	private $touched = array();
+
+	/**
 	 * Table specs, processed in order.
 	 *
 	 * @return array[]
@@ -111,8 +118,9 @@ abstract class PLCLEAN_Rule_Table extends PLCLEAN_Rule {
 	 * @return int|false Rows deleted, or false on a database error.
 	 */
 	public function clean_batch( $limit ) {
-		$remaining = (int) $limit;
-		$deleted   = 0;
+		$remaining     = (int) $limit;
+		$deleted       = 0;
+		$this->touched = array();
 		foreach ( $this->resolved() as $item ) {
 			if ( $remaining <= 0 ) {
 				break;
@@ -121,10 +129,22 @@ abstract class PLCLEAN_Rule_Table extends PLCLEAN_Rule {
 			if ( false === $n ) {
 				return false;
 			}
+			if ( $n > 0 ) {
+				$this->touched[] = $item['table'];
+			}
 			$deleted   += $n;
 			$remaining -= $n;
 		}
 		return $deleted;
+	}
+
+	/**
+	 * Real names of the tables the last clean_batch() call deleted rows from (empty before the first call).
+	 *
+	 * @return string[]
+	 */
+	public function last_tables_touched() {
+		return array_values( array_unique( $this->touched ) );
 	}
 
 	/**

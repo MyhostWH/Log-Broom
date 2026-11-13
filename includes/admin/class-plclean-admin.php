@@ -346,14 +346,28 @@ class PLCLEAN_Admin {
 	}
 
 	/**
-	 * AJAX: optimize a rule's tables.
+	 * AJAX: optimize the posted tables of a rule (the tables its batches deleted from, as reported in
+	 * `tables_touched`). Only names that are exactly one of the rule's own tables() are optimized, so the
+	 * request can never name another table.
 	 *
 	 * @return void
 	 */
 	public function ajax_optimize() {
 		$this->guard();
 		$rule = $this->posted_rule();
-		( new PLCLEAN_Cleaner() )->optimize( $rule );
+
+		$tables = array();
+		// Nonce verified in guard(); each name is only compared with the rule's own table names.
+		// phpcs:disable WordPress.Security.NonceVerification.Missing
+		if ( isset( $_POST['tables'] ) && is_array( $_POST['tables'] ) ) {
+			foreach ( wp_unslash( $_POST['tables'] ) as $table ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized below.
+				if ( is_string( $table ) ) {
+					$tables[] = sanitize_text_field( $table );
+				}
+			}
+		}
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+		( new PLCLEAN_Cleaner() )->optimize_tables( $rule, $tables );
 		wp_send_json_success( array( 'size' => (int) $rule->size() ) );
 	}
 

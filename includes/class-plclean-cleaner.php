@@ -13,8 +13,8 @@ defined( 'ABSPATH' ) || exit;
 class PLCLEAN_Cleaner {
 
 	/**
-	 * Option holding the ids of rules that deleted entries during a scheduled run that is still in progress
-	 * (spread over continuation events). Cleared when the run completes.
+	 * Option holding the names of the tables entries were deleted from during a scheduled run that is still in
+	 * progress (spread over continuation events). Cleared when the run completes.
 	 */
 	const PENDING_OPTIMIZE_OPTION = 'plclean_pending_optimize';
 
@@ -51,7 +51,8 @@ class PLCLEAN_Cleaner {
 	 * Delete one batch for a rule.
 	 *
 	 * 'stalled' is true when a batch deleted nothing although rows remain; 'done' is then also true so
-	 * callers stop instead of looping forever. When the database refused the delete, 'error' holds its message
+	 * callers stop instead of looping forever. 'tables_touched' lists the tables the batch deleted rows from.
+	 * When the database refused the delete, 'error' holds its message
 	 * (plain text, markup stripped, never empty) and both 'done' and 'stalled' are false: the batch can be retried. 'elapsed' is the time clean_batch() took, in seconds, measured
 	 * with the plclean_now clock (microtime( true ) unless filtered); 'limit' is the limit used.
 	 *
@@ -59,19 +60,21 @@ class PLCLEAN_Cleaner {
 	 * @param int|null     $limit Rows to delete at most; null uses the rule's batch_size(). Callers clamp it
 	 *                            with clamp_limit() first.
 	 * @return array array( 'deleted' => int, 'remaining' => int, 'done' => bool, 'stalled' => bool,
-	 *               'elapsed' => float, 'limit' => int ), plus 'error' => string on a database error.
+	 *               'elapsed' => float, 'limit' => int, 'tables_touched' => string[] ), plus
+	 *               'error' => string on a database error.
 	 */
 	public function run_batch( PLCLEAN_Rule $rule, $limit = null ) {
 		$limit = null === $limit ? (int) $rule->batch_size() : max( 1, (int) $limit );
 
 		if ( ! $rule->is_available() ) {
 			return array(
-				'deleted'   => 0,
-				'remaining' => 0,
-				'done'      => true,
-				'stalled'   => false,
-				'elapsed'   => 0.0,
-				'limit'     => $limit,
+				'deleted'        => 0,
+				'remaining'      => 0,
+				'done'           => true,
+				'stalled'        => false,
+				'elapsed'        => 0.0,
+				'limit'          => $limit,
+				'tables_touched' => array(),
 			);
 		}
 
@@ -83,13 +86,14 @@ class PLCLEAN_Cleaner {
 			// Read the reason before count() runs another query and clears it.
 			$error = self::error_text( $GLOBALS['wpdb']->last_error );
 			return array(
-				'deleted'   => 0,
-				'remaining' => (int) $rule->count(),
-				'done'      => false,
-				'stalled'   => false,
-				'elapsed'   => round( $elapsed, 4 ),
-				'limit'     => $limit,
-				'error'     => $error,
+				'deleted'        => 0,
+				'remaining'      => (int) $rule->count(),
+				'done'           => false,
+				'stalled'        => false,
+				'elapsed'        => round( $elapsed, 4 ),
+				'limit'          => $limit,
+				'tables_touched' => self::tables_touched( $rule, 0 ),
+				'error'          => $error,
 			);
 		}
 
@@ -98,13 +102,30 @@ class PLCLEAN_Cleaner {
 		$stalled   = 0 === $deleted && $remaining > 0;
 
 		return array(
-			'deleted'   => $deleted,
-			'remaining' => $remaining,
-			'done'      => 0 === $remaining || $stalled,
-			'stalled'   => $stalled,
-			'elapsed'   => round( $elapsed, 4 ),
-			'limit'     => $limit,
+			'deleted'        => $deleted,
+			'remaining'      => $remaining,
+			'done'           => 0 === $remaining || $stalled,
+			'stalled'        => $stalled,
+			'elapsed'        => round( $elapsed, 4 ),
+			'limit'          => $limit,
+			'tables_touched' => self::tables_touched( $rule, $deleted ),
 		);
+	}
+
+	/**
+	 * Tables the rule's last clean_batch() deleted rows from: exactly those for table rules, and all of the
+	 * rule's tables for the others once they deleted anything.
+	 *
+	 * @param PLCLEAN_Rule $rule    Rule.
+	 * @param int          $deleted Rows the batch deleted.
+	 * @return string[]
+	 */
+	private static function tables_touched( PLCLEAN_Rule $rule, $deleted ) {
+		if ( $rule instanceof PLCLEAN_Rule_Table ) {
+			// A failed batch can still have deleted from an earlier table.
+			return $rule->last_tables_touched();
+		}
+		return $deleted > 0 ? array_values( array_map( 'strval', $rule->tables() ) ) : array();
 	}
 
 	/**
@@ -174,9 +195,9 @@ class PLCLEAN_Cleaner {
 	 * doubles while full batches take under a second, stops at its maximum, and halves when a batch takes
 	 * over three seconds. When a fixed batch size is chosen (Advanced settings), it is used for every batch.
 	 *
-	 * When the whole run is done and optimizing is switched on, only the tables of rules that deleted entries
-	 * during the run (including earlier continuation runs) are optimized, and never the shared WordPress core
-	 * tables (rules whose is_core() is true).
+	 * When the whole run is done and optimizing is switched on, only the tables entries were deleted from during
+	 * the run (including earlier continuation runs) are optimized. Only tables of available rules that are not
+	 * is_core() qualify, so the shared WordPress core tables are never optimized from cron.
 	 *
 	 * @param string[] $rule_ids    Rule ids; unknown or unavailable rules are skipped.
 	 * A database error stops the run with done = false and 'error' set; the tables with deletes so far stay
@@ -212,6 +233,9 @@ class PLCLEAN_Cleaner {
 				}
 				$result   = $this->run_batch( $rule, $limit );
 				$deleted += $result['deleted'];
+				if ( ! $rule->is_core() ) {
+					$with_deletes = array_merge( $with_deletes, $result['tables_touched'] );
+				}
 				if ( isset( $result['error'] ) ) {
 					update_option( self::PENDING_OPTIMIZE_OPTION, array_values( array_unique( $with_deletes ) ), false );
 					return array(
@@ -223,21 +247,18 @@ class PLCLEAN_Cleaner {
 				if ( $adapt ) {
 					$limit = self::next_limit( $result['limit'], $result['deleted'], $result['elapsed'], $rule->max_batch_size() );
 				}
-				if ( $result['deleted'] > 0 ) {
-					$with_deletes[] = $rule->id();
-				}
 			} while ( ! $result['done'] );
 		}
 
 		delete_option( self::PENDING_OPTIMIZE_OPTION );
 
 		if ( $settings['optimize'] ) {
-			foreach ( array_unique( $with_deletes ) as $id ) {
-				$rule = PLCLEAN_Registry::get( $id );
-				if ( null === $rule || $rule->is_core() || ! $rule->is_available() ) {
+			$wanted = array_unique( $with_deletes );
+			foreach ( PLCLEAN_Registry::all() as $rule ) {
+				if ( $rule->is_core() || ! $rule->is_available() ) {
 					continue;
 				}
-				$this->optimize( $rule );
+				$wanted = array_diff( $wanted, $this->optimize_tables( $rule, $wanted ) );
 			}
 		}
 
@@ -248,7 +269,8 @@ class PLCLEAN_Cleaner {
 	}
 
 	/**
-	 * Rule ids with deletes from earlier parts of the scheduled run in progress.
+	 * Table names with deletes from earlier parts of the scheduled run in progress. Entries that are not a
+	 * table of an available, non-core rule (for example rule ids stored by 1.0.0) are ignored when optimizing.
 	 *
 	 * @return string[]
 	 */
@@ -258,14 +280,27 @@ class PLCLEAN_Cleaner {
 	}
 
 	/**
-	 * Optimize the tables a rule touches.
+	 * Optimize some of a rule's tables. Only names that are exactly one of the rule's own tables() are
+	 * optimized, so the list may come from untrusted input.
 	 *
-	 * @param PLCLEAN_Rule $rule Rule.
-	 * @return void
+	 * @param PLCLEAN_Rule $rule   Rule.
+	 * @param string[]     $tables Wanted table names.
+	 * @return string[] The tables optimized.
 	 */
-	public function optimize( PLCLEAN_Rule $rule ) {
-		foreach ( $rule->tables() as $table ) {
-			PLCLEAN_DB::optimize( $table );
+	public function optimize_tables( PLCLEAN_Rule $rule, array $tables ) {
+		$wanted = array();
+		foreach ( $tables as $table ) {
+			if ( is_string( $table ) ) {
+				$wanted[] = $table;
+			}
 		}
+		$done = array();
+		foreach ( $rule->tables() as $table ) {
+			if ( in_array( (string) $table, $wanted, true ) && ! in_array( (string) $table, $done, true ) ) {
+				PLCLEAN_DB::optimize( $table );
+				$done[] = (string) $table;
+			}
+		}
+		return $done;
 	}
 }

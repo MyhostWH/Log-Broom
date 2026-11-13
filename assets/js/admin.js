@@ -699,6 +699,7 @@
 			skipped: [],
 			skippedWhy: {}, // Error code per skipped source: unavailable | network_only.
 			cleaned: [],
+			touched: {}, // Per source: tables its batches deleted from (sent to plclean_optimize).
 			limit: {},
 			mode: batch.mode,
 			removed: {}, // Entries removed per source.
@@ -713,6 +714,7 @@
 			run.startSize[ id ] = sources[ id ].size;
 			run.limit[ id ] = firstLimit( id );
 			run.removed[ id ] = 0;
+			run.touched[ id ] = [];
 			run.state[ id ] = 'waiting';
 		} );
 		ui.run = run;
@@ -1031,6 +1033,11 @@
 			if ( deleted > 0 && run.cleaned.indexOf( id ) < 0 ) {
 				run.cleaned.push( id );
 			}
+			( Array.isArray( result.tables_touched ) ? result.tables_touched : [] ).forEach( ( table ) => {
+				if ( 'string' === typeof table && run.touched[ id ].indexOf( table ) < 0 ) {
+					run.touched[ id ].push( table );
+				}
+			} );
 			renderCard( id );
 
 			if ( result.stalled ) {
@@ -1044,9 +1051,13 @@
 
 		if ( $schedule.find( 'input[name="optimize"]' ).prop( 'checked' ) ) {
 			for ( const id of run.cleaned ) {
+				// Only the tables entries were removed from; the server ignores any that are not this source's.
+				if ( ! run.touched[ id ].length ) {
+					continue;
+				}
 				renderProgress( run, __( 'Optimizing tables…', 'log-broom' ) );
 				try {
-					const result = await post( 'plclean_optimize', { rule: id } );
+					const result = await post( 'plclean_optimize', { rule: id, tables: run.touched[ id ] } );
 					sources[ id ].size = parseInt( result.size, 10 ) || 0;
 				} catch ( error ) {
 					// Optimizing is a bonus; the entries are already removed.
