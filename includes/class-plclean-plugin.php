@@ -66,7 +66,8 @@ class PLCLEAN_Plugin {
 	public static function deactivate() {
 		wp_clear_scheduled_hook( PLCLEAN_Scheduler::HOOK );
 		wp_clear_scheduled_hook( PLCLEAN_Scheduler::CONTINUE_HOOK );
-		// The interrupted run is abandoned, so forget which of its tables were waiting to be optimized.
+		// The interrupted run is abandoned, so forget which of its tables were waiting to be optimized and its running total.
 		delete_option( PLCLEAN_Cleaner::PENDING_OPTIMIZE_OPTION );
+		delete_option( PLCLEAN_Scheduler::RUN_DELETED_OPTION );
 	}
 }

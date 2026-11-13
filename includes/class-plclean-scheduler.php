@@ -16,6 +16,11 @@ class PLCLEAN_Scheduler {
 	const CONTINUE_HOOK = 'plclean_scheduled_clean_continue';
 
 	/**
+	 * Option holding the rows deleted so far by the scheduled run in progress (across continuation parts).
+	 */
+	const RUN_DELETED_OPTION = 'plclean_run_deleted';
+
+	/**
 	 * Replace the recurring event according to the schedule setting. An event that already has the wanted
 	 * recurrence is left alone, so saving other settings does not move the next run.
 	 *
@@ -35,15 +40,16 @@ class PLCLEAN_Scheduler {
 			// Turning automatic cleaning off also cancels a pending continuation and forgets its partial run.
 			wp_clear_scheduled_hook( self::CONTINUE_HOOK );
 			delete_option( PLCLEAN_Cleaner::PENDING_OPTIMIZE_OPTION );
+			delete_option( self::RUN_DELETED_OPTION );
 		}
 	}
 
 	/**
 	 * Cron callback: clean the enabled rules.
 	 *
-	 * When the time budget runs out, a single follow-up event continues the work. The last-run record is
-	 * written when a run completes and holds the rows deleted by that final run only (earlier continuation
-	 * runs are not accumulated).
+	 * When the time budget runs out, a single follow-up event continues the work. Each part adds its deletes to
+	 * a running total (RUN_DELETED_OPTION, not autoloaded). When the run completes, the last-run record gets the
+	 * total of all its parts and the running total is removed.
 	 *
 	 * @return void
 	 */
@@ -54,10 +60,15 @@ class PLCLEAN_Scheduler {
 			return;
 		}
 		$result = ( new PLCLEAN_Cleaner() )->run_all( $settings['enabled_rules'] );
+		$total  = absint( get_option( self::RUN_DELETED_OPTION, 0 ) ) + (int) $result['deleted'];
 
 		if ( $result['done'] ) {
-			PLCLEAN_Settings::set_last_run( time(), $result['deleted'] );
-		} elseif ( ! wp_next_scheduled( self::CONTINUE_HOOK ) ) {
+			PLCLEAN_Settings::set_last_run( time(), $total );
+			delete_option( self::RUN_DELETED_OPTION );
+			return;
+		}
+		update_option( self::RUN_DELETED_OPTION, $total, false );
+		if ( ! wp_next_scheduled( self::CONTINUE_HOOK ) ) {
 			wp_schedule_single_event( time() + 60, self::CONTINUE_HOOK );
 		}
 	}
