@@ -206,16 +206,27 @@ $plclean_has_data = $data['totals']['count'] > 0;
 
 		<fieldset class="plclean-schedule" id="plclean-schedule" data-schedule="<?php echo esc_attr( $plclean_schedule ); ?>">
 			<legend><span class="dashicons dashicons-clock" aria-hidden="true"></span> <?php esc_html_e( 'Automatic cleaning', 'log-broom' ); ?></legend>
-			<div class="plclean-schedule-options">
+			<p class="plclean-no-js-only plclean-schedule-nojs">
+				<?php
+				if ( 'daily' === $plclean_schedule ) {
+					esc_html_e( 'Automatic cleaning: Daily', 'log-broom' );
+				} elseif ( 'weekly' === $plclean_schedule ) {
+					esc_html_e( 'Automatic cleaning: Weekly', 'log-broom' );
+				} else {
+					esc_html_e( 'Automatic cleaning: Off', 'log-broom' );
+				}
+				?>
+			</p>
+			<div class="plclean-schedule-options plclean-js-only">
 				<label><input type="radio" name="schedule" value="off"<?php checked( 'off', $plclean_schedule ); ?> /> <?php esc_html_e( 'Off', 'log-broom' ); ?></label>
 				<label><input type="radio" name="schedule" value="daily"<?php checked( 'daily', $plclean_schedule ); ?> /> <?php esc_html_e( 'Daily', 'log-broom' ); ?></label>
 				<label><input type="radio" name="schedule" value="weekly"<?php checked( 'weekly', $plclean_schedule ); ?> /> <?php esc_html_e( 'Weekly', 'log-broom' ); ?></label>
 				<label><input type="checkbox" name="optimize" value="1" aria-describedby="plclean-optimize-help"<?php checked( $plclean_settings['optimize'] ); ?> /> <?php esc_html_e( 'Optimize tables', 'log-broom' ); ?></label>
 			</div>
-			<p class="description">
+			<p class="description plclean-js-only">
 				<?php esc_html_e( 'Only the sources switched on under "Include in automatic cleaning" are cleaned.', 'log-broom' ); ?>
 			</p>
-			<p class="description" id="plclean-optimize-help">
+			<p class="description plclean-js-only" id="plclean-optimize-help">
 				<?php esc_html_e( 'Optimize tables only rebuilds tables where entries were removed. Automatic cleaning never rebuilds WordPress core tables.', 'log-broom' ); ?>
 			</p>
 			<p class="plclean-schedule-status" id="plclean-schedule-status">

@@ -108,8 +108,9 @@ class PLCLEAN_Admin {
 			return;
 		}
 		wp_enqueue_style( 'plclean-admin', plugins_url( 'assets/css/admin.css', PLCLEAN_FILE ), array( 'dashicons' ), PLCLEAN_VERSION );
-		// Keeps the page usable without JS: script-only controls stay hidden until admin.js removes `no-js`.
-		wp_add_inline_style( 'plclean-admin', '.plclean-app.no-js .plclean-js-only{display:none}' );
+		// Keeps the page usable without JS: script-only controls stay hidden until admin.js removes `no-js`, and
+		// their read-only replacements are shown only until then.
+		wp_add_inline_style( 'plclean-admin', '.plclean-app.no-js .plclean-js-only{display:none}.plclean-app:not(.no-js) .plclean-no-js-only{display:none}' );
 
 		wp_enqueue_script( 'plclean-admin', plugins_url( 'assets/js/admin.js', PLCLEAN_FILE ), array( 'jquery', 'wp-i18n' ), PLCLEAN_VERSION, true );
 		wp_localize_script( 'plclean-admin', 'plcleanAdmin', $this->get_script_data() );

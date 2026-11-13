@@ -114,28 +114,37 @@
 	/**
 	 * Animate an element's number from its current value to `to`.
 	 *
-	 * @param {jQuery} $el      Element whose text is a number.
-	 * @param {number} to       Target value.
-	 * @param {number} duration Milliseconds.
-	 * @param {number} [from]   Start value (defaults to the element's stored value).
+	 * @param {jQuery}   $el      Element whose text is a number.
+	 * @param {number}   to       Target value.
+	 * @param {number}   duration Milliseconds.
+	 * @param {number}   [from]   Start value (defaults to the element's stored value).
+	 * @param {Function} [render] Called with ( el, value ) for every value shown, instead of setting the text, so
+	 *                            the words around the number can follow it (singular / plural).
 	 */
-	function animateNumber( $el, to, duration, from ) {
+	function animateNumber( $el, to, duration, from, render ) {
 		$el.each( function () {
 			const el = this;
+			const show = ( value ) => {
+				if ( render ) {
+					render( el, Math.max( 0, Math.round( value ) ) );
+				} else {
+					el.textContent = fmt( value );
+				}
+			};
 			if ( el.plcleanFrame ) {
 				window.cancelAnimationFrame( el.plcleanFrame );
 			}
 			const start = undefined !== from ? from : ( undefined !== el.plcleanValue ? el.plcleanValue : to );
 			el.plcleanValue = to;
 			if ( motion.matches || start === to || ! window.requestAnimationFrame ) {
-				el.textContent = fmt( to );
+				show( to );
 				return;
 			}
 			const began = window.performance.now();
 			const step = ( now ) => {
 				const t = Math.min( 1, ( now - began ) / duration );
 				const eased = 1 - Math.pow( 1 - t, 3 ); // ease-out
-				el.textContent = fmt( start + ( to - start ) * eased );
+				show( start + ( to - start ) * eased );
 				el.plcleanFrame = t < 1 ? window.requestAnimationFrame( step ) : 0;
 			};
 			el.plcleanFrame = window.requestAnimationFrame( step );
@@ -368,6 +377,31 @@
 		} );
 	}
 
+	/**
+	 * Show `n` in the summary's "N entries" line, with the whole text from _n() so singular and plural always
+	 * match the number shown. The number element is kept (it holds the animation state); only the text around it
+	 * is replaced.
+	 *
+	 * @param {HTMLElement} strong The `.plclean-summary-count-value` element.
+	 * @param {number}      n      Entries.
+	 */
+	function renderSummaryCount( strong, n ) {
+		const line = strong.parentNode;
+		if ( ! line ) {
+			return;
+		}
+		/* translators: %s: number of entries. */
+		const parts = _n( '%s entry', '%s entries', n, 'log-broom' ).split( /%(?:1\$)?s/ );
+		Array.prototype.slice.call( line.childNodes ).forEach( ( node ) => {
+			if ( node !== strong ) {
+				line.removeChild( node );
+			}
+		} );
+		strong.textContent = fmt( n );
+		line.insertBefore( document.createTextNode( parts[ 0 ] ), strong );
+		line.appendChild( document.createTextNode( parts.slice( 1 ).join( '' ) ) );
+	}
+
 	/** Refresh the summary card from the current source data. */
 	function renderSummary() {
 		let count = 0;
@@ -378,7 +412,7 @@
 				size += sources[ id ].size;
 			}
 		} );
-		animateNumber( $app.find( '.plclean-summary-count-value' ), count, 600 );
+		animateNumber( $app.find( '.plclean-summary-count-value' ), count, 600, undefined, renderSummaryCount );
 		const $sizeLine = $app.find( '.plclean-summary-size' );
 		if ( size > 0 ) {
 			$app.find( '.plclean-summary-size-value' ).text( formatBytes( size ) );
@@ -465,14 +499,15 @@
 			return;
 		}
 		const onClose = ui.onClose;
-		const target = ui.returnFocus;
 		ui.onClose = null;
-		ui.returnFocus = null;
 		ui.run = null;
 		$dialog.empty();
+		// onClose runs first and may choose where focus goes (ui.returnFocus); only then is the target read.
 		if ( onClose ) {
 			onClose();
 		}
+		const target = ui.returnFocus;
+		ui.returnFocus = null;
 		let focusTarget = target && document.body.contains( target ) && ! target.disabled ? target : null;
 		if ( ! focusTarget ) {
 			focusTarget = document.getElementById( 'plclean-summary' );
@@ -1386,10 +1421,24 @@
 		saveFields( { batch_mode: mode, batch_size: size } ).catch( () => applyBatch( true ) );
 	}
 
-	/** Clamp the typed size, show it, and save it. */
+	/**
+	 * True from a pointer press on a batch mode radio (or its label) until that click is handled. The press blurs
+	 * the number field first; its `change` must then not start a save of its own, so the radio's handler can save
+	 * the final mode and size once.
+	 */
+	let pickingMode = false;
+	let pickTimer = 0;
+
+	/**
+	 * How long after the press is released a click may still arrive. On touch screens the compatibility mouse
+	 * events, the focus change and the click come after pointerup, possibly in a later task.
+	 */
+	const PICK_CLICK_WAIT = 500;
+
+	/** Clamp the typed size, show it, and save it (on `change`, Enter or blur; never while typing). */
 	function commitBatchSize() {
 		window.clearTimeout( batchTimer );
-		if ( $batchSize.prop( 'disabled' ) ) {
+		if ( $batchSize.prop( 'disabled' ) || pickingMode ) {
 			return;
 		}
 		const raw = $batchSize.val();
@@ -1402,24 +1451,68 @@
 		saveBatch( 'fixed', size );
 	}
 
+	/**
+	 * End a mode pick: remove its listeners and, when no mode change handled it (released elsewhere, or a tap on the
+	 * mode already chosen), commit the typed size.
+	 */
+	function endPick() {
+		window.clearTimeout( pickTimer );
+		document.removeEventListener( 'click', onPickClick, true );
+		document.removeEventListener( 'pointerup', onPickRelease, true );
+		document.removeEventListener( 'pointercancel', onPickRelease, true );
+		document.removeEventListener( 'mouseup', onPickRelease, true );
+		if ( pickingMode ) {
+			pickingMode = false;
+			commitBatchSize();
+		}
+	}
+
+	/** The pick's click: end the pick once the click (and the radio's `change`, if any) has been handled. */
+	function onPickClick() {
+		window.clearTimeout( pickTimer );
+		pickTimer = window.setTimeout( endPick, 0 );
+	}
+
+	/** Press released: end the pick only if no click follows in time. */
+	function onPickRelease() {
+		window.clearTimeout( pickTimer );
+		pickTimer = window.setTimeout( endPick, PICK_CLICK_WAIT );
+	}
+
+	$batch.on( 'pointerdown mousedown', '.plclean-batch-options label, input[name="batch_mode"]', function ( event ) {
+		const radio = 'batch_mode' === event.target.name ? event.target : $( this ).find( 'input[name="batch_mode"]' )[ 0 ];
+		if ( ! radio || pickingMode ) {
+			return;
+		}
+		pickingMode = true;
+		window.clearTimeout( pickTimer );
+		document.addEventListener( 'click', onPickClick, true );
+		document.addEventListener( 'pointerup', onPickRelease, true );
+		document.addEventListener( 'pointercancel', onPickRelease, true );
+		document.addEventListener( 'mouseup', onPickRelease, true );
+	} );
+
 	$batch.on( 'change', 'input[name="batch_mode"]', function () {
+		pickingMode = false;
 		if ( saving ) {
 			applyBatch( false );
 			return;
 		}
+		// Decide the final mode and size from the controls, show the size that is saved, then save once.
 		const mode = 'fixed' === this.value ? 'fixed' : 'auto';
+		const size = clampBatchSize( $batchSize.val() );
+		$batchSize.val( size ).attr( 'aria-invalid', null );
 		$batchSize.prop( 'disabled', 'fixed' !== mode );
 		batchHelp( false );
-		saveBatch( mode, 'fixed' === mode ? clampBatchSize( $batchSize.val() ) : batch.size );
+		saveBatch( mode, size );
 	} );
 
 	$batchSize.on( 'input', function () {
+		// Only the inline help reacts while typing; the number is committed on change, Enter or blur.
 		batchHelp( ! validBatchSize( this.value ) );
-		window.clearTimeout( batchTimer );
-		batchTimer = window.setTimeout( commitBatchSize, 1000 );
 	} );
 
-	$batchSize.on( 'change', commitBatchSize );
+	$batchSize.on( 'change blur', commitBatchSize );
 
 	$batchSize.on( 'keydown', function ( event ) {
 		if ( 'Enter' === event.key ) {
@@ -1444,8 +1537,8 @@
 		ui.onClose = () => {
 			if ( ! confirmed ) {
 				applySchedule(); // Back to the previous value.
-				ui.returnFocus = null;
-				$schedule.find( 'input[name="schedule"]:checked' ).trigger( 'focus' );
+				// Focus the radio that is checked now (the previous schedule), not the one that was picked.
+				ui.returnFocus = $schedule.find( 'input[name="schedule"]:checked' )[ 0 ] || null;
 			}
 		};
 		renderDialog( {
@@ -1605,5 +1698,5 @@
 	applySchedule();
 	updateSelection();
 	const totalCount = ( data.totals && data.totals.count ) || 0;
-	animateNumber( $app.find( '.plclean-summary-count-value' ), totalCount, 700, 0 );
+	animateNumber( $app.find( '.plclean-summary-count-value' ), totalCount, 700, 0, renderSummaryCount );
 }( jQuery, window.wp ) );
