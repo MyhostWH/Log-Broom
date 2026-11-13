@@ -985,7 +985,8 @@
 			startSize: {},
 			stalled: [],
 			skipped: [],
-			skippedWhy: {}, // Error code per skipped source: unavailable | network_only.
+			skippedWhy: {}, // Why each source was skipped: unavailable | network_only | error (skipped after database errors).
+			failures: {}, // Per source: requests in a row that failed with a server message (a database error).
 			stalledWhy: {}, // Plain-text reason per stalled source, when the server gave one.
 			cleaned: [],
 			touched: {}, // Per source: tables its batches deleted from (sent to plclean_optimize).
@@ -1056,6 +1057,10 @@
 				/* translators: %s: source name. */
 				return sprintf( __( "%s — some entries couldn't be deleted", 'log-broom' ), label );
 			case 'skipped':
+				if ( 'error' === run.skippedWhy[ id ] ) {
+					/* translators: %s: source name. */
+					return sprintf( __( '%s — skipped after a database error', 'log-broom' ), label );
+				}
 				/* translators: %s: source name. */
 				return sprintf( __( '%s — skipped (not available)', 'log-broom' ), label );
 			default:
@@ -1313,10 +1318,12 @@
 				if ( 'session' !== error.kind ) {
 					shrinkAfterFailure( run, id );
 				}
+				run.failures[ id ] = 'message' === error.kind ? ( run.failures[ id ] || 0 ) + 1 : 0;
 				renderPaused( run, id, error );
 				return;
 			}
 
+			run.failures[ id ] = 0;
 			const deleted = parseInt( result.deleted, 10 ) || 0;
 			const remaining = parseInt( result.remaining, 10 ) || 0;
 			recordSpeed( run, deleted, ( window.performance.now() - sent ) / 1000 );
@@ -1445,19 +1452,52 @@
 			} );
 		}
 
+		const footer = [ $close ];
+		if ( 'message' === kind && run.failures[ id ] >= 2 ) {
+			// The same source failed again after Resume: let the others be cleaned.
+			const $skip = $( '<button type="button" class="button plclean-skip"></button>' ).text( __( 'Skip this source', 'log-broom' ) );
+			$skip.attr( 'aria-describedby', 'plclean-title-' + id );
+			$skip.on( 'click', () => {
+				run.skipped.push( id );
+				run.skippedWhy[ id ] = 'error';
+				run.state[ id ] = 'skipped';
+				run.index++;
+				ui.run = run;
+				runLoop();
+			} );
+			footer.push( $skip );
+		}
+		footer.push( $primary );
+
 		renderDialog( {
 			title: document.createTextNode( __( 'Cleaning paused', 'log-broom' ) ),
 			headerIcon: 'warning',
 			tone: 'warning',
 			closable: true,
 			body,
-			footer: [ $close, $primary ],
+			footer,
 			focus: $primary,
 		} );
 		announce( __( 'Cleaning paused', 'log-broom' ), true );
 
 		ui.run = run;
 		$close.on( 'click', () => dialog.close() );
+	}
+
+	/**
+	 * Why a source was not cleaned, for the success view.
+	 *
+	 * @param {string} why unavailable | network_only | error.
+	 * @return {string} Text.
+	 */
+	function skippedText( why ) {
+		if ( 'network_only' === why ) {
+			return __( 'Not cleaned: only a network administrator can clean network-wide logs.', 'log-broom' );
+		}
+		if ( 'error' === why ) {
+			return __( 'Skipped: the database refused to delete entries. Try again later.', 'log-broom' );
+		}
+		return __( 'Not cleaned: this source is no longer on this site.', 'log-broom' );
 	}
 
 	/**
@@ -1495,11 +1535,7 @@
 						$( '<span>' ).append(
 							$( '<strong>' ).text( sources[ id ].label ),
 							' ',
-							document.createTextNode(
-								'network_only' === run.skippedWhy[ id ]
-									? __( 'Not cleaned: only a network administrator can clean network-wide logs.', 'log-broom' )
-									: __( 'Not cleaned: this source is no longer on this site.', 'log-broom' )
-							)
+							document.createTextNode( skippedText( run.skippedWhy[ id ] ) )
 						)
 					)
 				);
@@ -1563,7 +1599,8 @@
 		}
 		let text = 'daily' === schedule ? __( 'Automatic cleaning is on. It runs daily.', 'log-broom' ) : __( 'Automatic cleaning is on. It runs weekly.', 'log-broom' );
 		const last = data.lastRun;
-		if ( last ) {
+		// The error line about failed sources already gives the last run's date and total.
+		if ( last && ! $( '#plclean-last-error[data-has-last-run]' ).length ) {
 			text += ' ' + sprintf(
 				/* translators: 1: date, 2: number of entries removed. */
 				_n( 'Last run: %1$s, removed %2$s entry.', 'Last run: %1$s, removed %2$s entries.', last.deleted, 'log-broom' ),

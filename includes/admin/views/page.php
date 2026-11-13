@@ -30,6 +30,9 @@ foreach ( $data['sources'] as $plclean_source ) {
 $plclean_settings = $data['settings'];
 $plclean_schedule = $plclean_settings['schedule'];
 $plclean_last_run = $data['last_run'];
+// With failed sources, the error line names the last run's date and total itself.
+$plclean_error_line = 'off' !== $plclean_schedule && ! empty( $data['last_error'] ) ? PLCLEAN_Admin::last_error_line( $data['last_error'], $plclean_last_run ) : '';
+$plclean_full_error = '' !== $plclean_error_line && array() !== $data['last_error']['rules'];
 ?>
 <div class="wrap plclean-app no-js<?php echo 'off' === $plclean_schedule ? ' plclean-schedule-off' : ''; ?>" id="plclean-app">
 	<h1><?php esc_html_e( 'Log Broom', 'log-broom' ); ?></h1>
@@ -222,20 +225,17 @@ $plclean_last_run = $data['last_run'];
 					} else {
 						esc_html_e( 'Automatic cleaning is on. It runs weekly.', 'log-broom' );
 					}
-					if ( $plclean_last_run ) {
+					if ( $plclean_last_run && ! $plclean_full_error ) {
 						/* translators: 1: date, 2: number of entries removed. */
 						echo ' ' . esc_html( sprintf( _n( 'Last run: %1$s, removed %2$s entry.', 'Last run: %1$s, removed %2$s entries.', $plclean_last_run['deleted'], 'log-broom' ), wp_date( get_option( 'date_format' ), $plclean_last_run['time'] ), number_format_i18n( $plclean_last_run['deleted'] ) ) );
 					}
 				}
 				?>
 			</p>
-			<?php if ( 'off' !== $plclean_schedule && ! empty( $data['last_error'] ) ) : ?>
-				<p class="plclean-last-error" id="plclean-last-error">
+			<?php if ( '' !== $plclean_error_line ) : ?>
+				<p class="plclean-last-error" id="plclean-last-error"<?php echo $plclean_full_error ? ' data-has-last-run="1"' : ''; ?>>
 					<span class="dashicons dashicons-warning" aria-hidden="true"></span>
-					<?php
-					/* translators: %s: error message from the database. */
-					echo esc_html( sprintf( __( 'Last automatic run failed: %s. It will retry automatically.', 'log-broom' ), rtrim( $data['last_error']['message'], '. ' ) ) );
-					?>
+					<?php echo esc_html( $plclean_error_line ); ?>
 				</p>
 			<?php endif; ?>
 		</fieldset>

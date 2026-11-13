@@ -38,7 +38,7 @@ class PLCLEAN_Plugin {
 	 */
 	public function boot() {
 		add_action( PLCLEAN_Scheduler::HOOK, array( 'PLCLEAN_Scheduler', 'handle' ) );
-		add_action( PLCLEAN_Scheduler::CONTINUE_HOOK, array( 'PLCLEAN_Scheduler', 'handle' ) );
+		add_action( PLCLEAN_Scheduler::CONTINUE_HOOK, array( 'PLCLEAN_Scheduler', 'handle_continue' ) );
 
 		if ( is_admin() ) {
 			( new PLCLEAN_Admin() )->register();
@@ -66,9 +66,8 @@ class PLCLEAN_Plugin {
 	public static function deactivate() {
 		wp_clear_scheduled_hook( PLCLEAN_Scheduler::HOOK );
 		wp_clear_scheduled_hook( PLCLEAN_Scheduler::CONTINUE_HOOK );
-		// The interrupted run is abandoned, so forget which of its tables were waiting to be optimized and its running total.
-		delete_option( PLCLEAN_Cleaner::PENDING_OPTIMIZE_OPTION );
-		delete_option( PLCLEAN_Scheduler::RUN_DELETED_OPTION );
-		delete_option( PLCLEAN_Scheduler::LAST_ERROR_OPTION );
+		// The interrupted run is abandoned: forget its tables waiting to be optimized, its running total, its errors
+		// and the retry count.
+		PLCLEAN_Scheduler::forget_state();
 	}
 }

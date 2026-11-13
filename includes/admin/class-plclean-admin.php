@@ -269,6 +269,49 @@ class PLCLEAN_Admin {
 	}
 
 	/**
+	 * The line about the last automatic run's database errors (plain text; escape it).
+	 *
+	 * With failed sources: "Last automatic run: <date>, removed N entries. <Source>: database error: <message>.
+	 * It will retry at <time>." An error stored by 1.0.1 (no sources) keeps its old line.
+	 *
+	 * @param array      $error    From PLCLEAN_Scheduler::get_last_error().
+	 * @param array|null $last_run From PLCLEAN_Settings::get_last_run().
+	 * @return string
+	 */
+	public static function last_error_line( array $error, $last_run ) {
+		if ( array() === $error['rules'] ) {
+			/* translators: %s: error message from the database. */
+			return sprintf( __( 'Last automatic run failed: %s. It will retry automatically.', 'log-broom' ), rtrim( $error['message'], '. ' ) );
+		}
+		$parts = array();
+		if ( $last_run ) {
+			$parts[] = sprintf(
+				/* translators: 1: date, 2: number of entries removed. */
+				_n( 'Last automatic run: %1$s, removed %2$s entry.', 'Last automatic run: %1$s, removed %2$s entries.', $last_run['deleted'], 'log-broom' ),
+				wp_date( get_option( 'date_format' ), $last_run['time'] ),
+				number_format_i18n( $last_run['deleted'] )
+			);
+		}
+		foreach ( $error['rules'] as $id => $message ) {
+			$rule    = PLCLEAN_Registry::get( $id );
+			$parts[] = sprintf(
+				/* translators: 1: source name, 2: error message from the database. */
+				__( '%1$s: database error: %2$s.', 'log-broom' ),
+				null === $rule ? $id : $rule->label(),
+				rtrim( $message, '. ' )
+			);
+		}
+		$retry = wp_next_scheduled( PLCLEAN_Scheduler::CONTINUE_HOOK );
+		if ( false === $retry ) {
+			$parts[] = __( 'It will retry automatically.', 'log-broom' );
+		} else {
+			/* translators: %s: date and time of the next try. */
+			$parts[] = sprintf( __( 'It will retry at %s.', 'log-broom' ), wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $retry ) );
+		}
+		return implode( ' ', $parts );
+	}
+
+	/**
 	 * Render the page.
 	 *
 	 * @return void

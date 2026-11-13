@@ -291,17 +291,20 @@ class PLCLEAN_Cleaner {
 	 * the run (including earlier continuation runs) are optimized. Only tables of available rules that are not
 	 * is_core() qualify, so the shared WordPress core tables are never optimized from cron.
 	 *
-	 * @param string[] $rule_ids    Rule ids; unknown or unavailable rules are skipped.
-	 * A database error stops the run with done = false and 'error' set; the tables with deletes so far stay
-	 * pending for the run's next part.
+	 * A rule that hits a database error is set aside (its error is returned in 'errors') and the run carries on with
+	 * the next rule, so one failing source never blocks the others. The run is done when every rule is done or
+	 * failed.
 	 *
+	 * @param string[] $rule_ids    Rule ids; unknown or unavailable rules are skipped.
 	 * @param int      $time_budget Seconds before stopping with done = false.
-	 * @return array array( 'deleted' => int, 'done' => bool ), plus 'error' => string on a database error.
+	 * @return array array( 'deleted' => int, 'done' => bool ), plus 'errors' => array( rule id => message ) when
+	 *               rules hit a database error (plain-text messages, see error_text()).
 	 */
 	public function run_all( array $rule_ids, $time_budget = 20 ) {
 		$start        = $this->now();
 		$deleted      = 0;
 		$with_deletes = $this->pending_optimize();
+		$errors       = array();
 		$settings     = PLCLEAN_Settings::get();
 		$fixed        = 'fixed' === $settings['batch_mode'];
 
@@ -318,10 +321,7 @@ class PLCLEAN_Cleaner {
 			do {
 				if ( $this->now() - $start >= $time_budget ) {
 					update_option( self::PENDING_OPTIMIZE_OPTION, array_values( array_unique( $with_deletes ) ), false );
-					return array(
-						'deleted' => $deleted,
-						'done'    => false,
-					);
+					return self::run_result( $deleted, false, $errors );
 				}
 				$result   = $this->run_batch( $rule, $limit );
 				$deleted += $result['deleted'];
@@ -329,12 +329,9 @@ class PLCLEAN_Cleaner {
 					$with_deletes = array_merge( $with_deletes, $result['tables_touched'] );
 				}
 				if ( isset( $result['error'] ) ) {
-					update_option( self::PENDING_OPTIMIZE_OPTION, array_values( array_unique( $with_deletes ) ), false );
-					return array(
-						'deleted' => $deleted,
-						'done'    => false,
-						'error'   => $result['error'],
-					);
+					// Set this rule aside and carry on with the next one.
+					$errors[ $rule->id() ] = $result['error'];
+					break;
 				}
 				if ( $adapt ) {
 					$limit = self::next_limit( $result['limit'], $result['deleted'], $result['elapsed'], $rule->max_batch_size() );
@@ -354,10 +351,26 @@ class PLCLEAN_Cleaner {
 			}
 		}
 
-		return array(
+		return self::run_result( $deleted, true, $errors );
+	}
+
+	/**
+	 * What run_all() returns.
+	 *
+	 * @param int   $deleted Rows deleted.
+	 * @param bool  $done    Whether every rule is done or failed.
+	 * @param array $errors  Rule id => database error message.
+	 * @return array
+	 */
+	private static function run_result( $deleted, $done, array $errors ) {
+		$result = array(
 			'deleted' => $deleted,
-			'done'    => true,
+			'done'    => $done,
 		);
+		if ( array() !== $errors ) {
+			$result['errors'] = $errors;
+		}
+		return $result;
 	}
 
 	/**

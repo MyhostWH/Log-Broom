@@ -19,6 +19,8 @@ function plclean_uninstall_site() {
 	delete_option( 'plclean_pending_optimize' );
 	delete_option( 'plclean_run_deleted' );
 	delete_option( 'plclean_last_error' );
+	delete_option( 'plclean_run_errors' );
+	delete_option( 'plclean_run_scope' );
 	delete_option( 'plclean_idle_batches' );
 	delete_transient( 'plclean_as_scan' );
 	wp_clear_scheduled_hook( 'plclean_scheduled_clean' );
