@@ -69,5 +69,6 @@ class PLCLEAN_Plugin {
 		// The interrupted run is abandoned, so forget which of its tables were waiting to be optimized and its running total.
 		delete_option( PLCLEAN_Cleaner::PENDING_OPTIMIZE_OPTION );
 		delete_option( PLCLEAN_Scheduler::RUN_DELETED_OPTION );
+		delete_option( PLCLEAN_Scheduler::LAST_ERROR_OPTION );
 	}
 }

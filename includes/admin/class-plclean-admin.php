@@ -232,14 +232,15 @@ class PLCLEAN_Admin {
 		}
 
 		$this->view_data = array(
-			'sources'  => $sources,
-			'totals'   => array(
+			'sources'    => $sources,
+			'totals'     => array(
 				'count'      => $count,
 				'size'       => $size,
 				'size_human' => $size > 0 ? size_format( $size ) : '',
 			),
-			'settings' => PLCLEAN_Settings::get(),
-			'last_run' => PLCLEAN_Settings::get_last_run(),
+			'settings'   => PLCLEAN_Settings::get(),
+			'last_run'   => PLCLEAN_Settings::get_last_run(),
+			'last_error' => PLCLEAN_Scheduler::get_last_error(),
 		);
 		return $this->view_data;
 	}
@@ -329,7 +330,17 @@ class PLCLEAN_Admin {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in guard().
 		$limit = isset( $_POST['limit'] ) ? PLCLEAN_Cleaner::clamp_limit( $rule, absint( wp_unslash( $_POST['limit'] ) ) ) : null;
 
-		$result         = ( new PLCLEAN_Cleaner() )->run_batch( $rule, $limit );
+		$result = ( new PLCLEAN_Cleaner() )->run_batch( $rule, $limit );
+		if ( isset( $result['error'] ) ) {
+			// The message is plain text (see PLCLEAN_Cleaner::error_text()); the script shows it as text.
+			wp_send_json_error(
+				array(
+					/* translators: %s: error message from the database. */
+					'message' => sprintf( __( 'The database refused to delete entries: %s', 'log-broom' ), $result['error'] ),
+				),
+				500
+			);
+		}
 		$result['size'] = (int) $rule->size();
 		wp_send_json_success( $result );
 	}

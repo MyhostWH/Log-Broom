@@ -741,6 +741,24 @@
 	font-weight: 600;
 }
 
+/* The last automatic run hit a database error; it retries on its own. */
+.plclean-last-error {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--plclean-space-2);
+	margin: var(--plclean-space-2) 0 0;
+	font-size: 14px;
+	color: var(--plclean-text);
+}
+
+.plclean-last-error .dashicons {
+	color: var(--plclean-warning-icon);
+}
+
+.plclean-schedule-off .plclean-last-error {
+	display: none;
+}
+
 /* -------------------------------------------------------------------------------------------------
  * Advanced (entries per batch)
  * ----------------------------------------------------------------------------------------------- */

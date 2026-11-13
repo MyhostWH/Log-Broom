@@ -107,7 +107,8 @@ class PLCLEAN_DB {
 	 * @param string $table Real table name from find_table().
 	 * @param string $where Static SQL condition from rule code (no WHERE keyword), or empty.
 	 * @param int    $limit Maximum rows to delete.
-	 * @return int Rows deleted.
+	 * @return int|false Rows deleted, or false when the database refused the DELETE (lock wait timeout,
+	 *                   deadlock, read-only server…); $wpdb->last_error then holds the reason.
 	 */
 	public static function delete_batch( $table, $where, $limit ) {
 		global $wpdb;
@@ -121,7 +122,7 @@ class PLCLEAN_DB {
 		// Table is resolved by find_table(); $where is a static fragment from rule code; $limit is an int.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$deleted = $wpdb->query( $sql );
-		return (int) $deleted;
+		return false === $deleted ? false : (int) $deleted;
 	}
 
 	/**

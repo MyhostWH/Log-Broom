@@ -51,7 +51,7 @@ abstract class PLCLEAN_Rule {
 	 * Delete up to $limit rows.
 	 *
 	 * @param int $limit Maximum rows to delete in this call.
-	 * @return int Rows deleted.
+	 * @return int|false Rows deleted, or false when the database refused to delete ($wpdb->last_error says why).
 	 */
 	abstract public function clean_batch( $limit );
 

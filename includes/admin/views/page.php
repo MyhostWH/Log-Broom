@@ -247,6 +247,15 @@ $plclean_has_data = $data['totals']['count'] > 0;
 				}
 				?>
 			</p>
+			<?php if ( 'off' !== $plclean_schedule && ! empty( $data['last_error'] ) ) : ?>
+				<p class="plclean-last-error" id="plclean-last-error">
+					<span class="dashicons dashicons-warning" aria-hidden="true"></span>
+					<?php
+					/* translators: %s: error message from the database. */
+					echo esc_html( sprintf( __( 'Last automatic run failed: %s. It will retry automatically.', 'log-broom' ), rtrim( $data['last_error']['message'], '. ' ) ) );
+					?>
+				</p>
+			<?php endif; ?>
 		</fieldset>
 
 		<details class="plclean-advanced plclean-js-only" id="plclean-advanced">

@@ -104,8 +104,11 @@ abstract class PLCLEAN_Rule_Table extends PLCLEAN_Rule {
 	/**
 	 * Delete up to $limit rows in total across specs, in order.
 	 *
+	 * Stops at the first database error and returns false; rows already deleted from earlier tables in this
+	 * call stay deleted.
+	 *
 	 * @param int $limit Maximum rows to delete.
-	 * @return int Rows deleted.
+	 * @return int|false Rows deleted, or false on a database error.
 	 */
 	public function clean_batch( $limit ) {
 		$remaining = (int) $limit;
@@ -114,7 +117,10 @@ abstract class PLCLEAN_Rule_Table extends PLCLEAN_Rule {
 			if ( $remaining <= 0 ) {
 				break;
 			}
-			$n          = PLCLEAN_DB::delete_batch( $item['table'], $item['where'], $remaining );
+			$n = PLCLEAN_DB::delete_batch( $item['table'], $item['where'], $remaining );
+			if ( false === $n ) {
+				return false;
+			}
 			$deleted   += $n;
 			$remaining -= $n;
 		}

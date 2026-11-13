@@ -51,14 +51,15 @@ class PLCLEAN_Cleaner {
 	 * Delete one batch for a rule.
 	 *
 	 * 'stalled' is true when a batch deleted nothing although rows remain; 'done' is then also true so
-	 * callers stop instead of looping forever. 'elapsed' is the time clean_batch() took, in seconds, measured
+	 * callers stop instead of looping forever. When the database refused the delete, 'error' holds its message
+	 * (plain text, markup stripped, never empty) and both 'done' and 'stalled' are false: the batch can be retried. 'elapsed' is the time clean_batch() took, in seconds, measured
 	 * with the plclean_now clock (microtime( true ) unless filtered); 'limit' is the limit used.
 	 *
 	 * @param PLCLEAN_Rule $rule  Rule.
 	 * @param int|null     $limit Rows to delete at most; null uses the rule's batch_size(). Callers clamp it
 	 *                            with clamp_limit() first.
 	 * @return array array( 'deleted' => int, 'remaining' => int, 'done' => bool, 'stalled' => bool,
-	 *               'elapsed' => float, 'limit' => int ).
+	 *               'elapsed' => float, 'limit' => int ), plus 'error' => string on a database error.
 	 */
 	public function run_batch( PLCLEAN_Rule $rule, $limit = null ) {
 		$limit = null === $limit ? (int) $rule->batch_size() : max( 1, (int) $limit );
@@ -74,9 +75,25 @@ class PLCLEAN_Cleaner {
 			);
 		}
 
-		$started   = $this->now();
-		$deleted   = (int) $rule->clean_batch( $limit );
-		$elapsed   = max( 0.0, $this->now() - $started );
+		$started = $this->now();
+		$deleted = $rule->clean_batch( $limit );
+		$elapsed = max( 0.0, $this->now() - $started );
+
+		if ( false === $deleted ) {
+			// Read the reason before count() runs another query and clears it.
+			$error = self::error_text( $GLOBALS['wpdb']->last_error );
+			return array(
+				'deleted'   => 0,
+				'remaining' => (int) $rule->count(),
+				'done'      => false,
+				'stalled'   => false,
+				'elapsed'   => round( $elapsed, 4 ),
+				'limit'     => $limit,
+				'error'     => $error,
+			);
+		}
+
+		$deleted   = (int) $deleted;
 		$remaining = (int) $rule->count();
 		$stalled   = 0 === $deleted && $remaining > 0;
 
@@ -88,6 +105,18 @@ class PLCLEAN_Cleaner {
 			'elapsed'   => round( $elapsed, 4 ),
 			'limit'     => $limit,
 		);
+	}
+
+	/**
+	 * A database error message as plain text: markup and control characters removed, never empty. It is
+	 * untrusted text and is still escaped wherever it is shown.
+	 *
+	 * @param mixed $message Raw message, e.g. $wpdb->last_error.
+	 * @return string
+	 */
+	public static function error_text( $message ) {
+		$text = is_scalar( $message ) ? trim( preg_replace( '/[\x00-\x1F\x7F]+/', ' ', wp_strip_all_tags( (string) $message ) ) ) : '';
+		return '' !== $text ? $text : __( 'Unknown database error.', 'log-broom' );
 	}
 
 	/**
@@ -150,8 +179,11 @@ class PLCLEAN_Cleaner {
 	 * tables (rules whose is_core() is true).
 	 *
 	 * @param string[] $rule_ids    Rule ids; unknown or unavailable rules are skipped.
+	 * A database error stops the run with done = false and 'error' set; the tables with deletes so far stay
+	 * pending for the run's next part.
+	 *
 	 * @param int      $time_budget Seconds before stopping with done = false.
-	 * @return array array( 'deleted' => int, 'done' => bool ).
+	 * @return array array( 'deleted' => int, 'done' => bool ), plus 'error' => string on a database error.
 	 */
 	public function run_all( array $rule_ids, $time_budget = 20 ) {
 		$start        = $this->now();
@@ -180,6 +212,14 @@ class PLCLEAN_Cleaner {
 				}
 				$result   = $this->run_batch( $rule, $limit );
 				$deleted += $result['deleted'];
+				if ( isset( $result['error'] ) ) {
+					update_option( self::PENDING_OPTIMIZE_OPTION, array_values( array_unique( $with_deletes ) ), false );
+					return array(
+						'deleted' => $deleted,
+						'done'    => false,
+						'error'   => $result['error'],
+					);
+				}
 				if ( $adapt ) {
 					$limit = self::next_limit( $result['limit'], $result['deleted'], $result['elapsed'], $rule->max_batch_size() );
 				}
