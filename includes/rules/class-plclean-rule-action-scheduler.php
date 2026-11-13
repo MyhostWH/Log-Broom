@@ -104,13 +104,6 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 	private $as_touched = array();
 
 	/**
-	 * Rows the last clean_batch() call deleted.
-	 *
-	 * @var int
-	 */
-	private $last_deleted = 0;
-
-	/**
 	 * Whether the last clean_batch() call moved a scan forward (more of the tables are still to be read).
 	 *
 	 * @var bool
@@ -216,8 +209,6 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 			'pass_deleted' => 0,
 			'empty_passes' => 0,
 			'from_top'     => true,
-			'remaining'    => null,
-			'parts'        => null,
 		);
 		if ( ! is_array( $state ) ) {
 			return $defaults;
@@ -231,11 +222,6 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 		$state['log']          = absint( $state['log'] );
 		$state['pass_deleted'] = absint( $state['pass_deleted'] );
 		$state['empty_passes'] = absint( $state['empty_passes'] );
-		$state['remaining']    = null === $state['remaining'] ? null : absint( $state['remaining'] );
-		$state['parts']        = is_array( $state['parts'] ) && isset( $state['parts']['tasks'], $state['parts']['logs'] ) ? array(
-			'tasks' => absint( $state['parts']['tasks'] ),
-			'logs'  => absint( $state['parts']['logs'] ),
-		) : null;
 		return $state;
 	}
 
@@ -308,23 +294,17 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 	}
 
 	/**
-	 * Remaining entries after a batch. A batch that only moved a scan forward (it deleted nothing) reuses the last
-	 * count when it was above 0, instead of counting again; any other batch counts. So "nothing left" (which ends a
-	 * run) always comes from a real count.
+	 * Remaining entries after a batch: always the real count (count_parts(), one cheap statement), also after a batch
+	 * that deleted nothing. A count saved by an earlier run (the scan state lives for an hour) is never shown, and
+	 * "nothing left" (which ends a run) always comes from a real count.
 	 *
 	 * @return int
 	 */
 	public function remaining_after_batch() {
-		$state = $this->scan_state();
-		// Only a positive count is reused: a saved 0 may be from an earlier run, and must never end this one.
-		if ( 0 === $this->last_deleted && ! $this->pass_end && $state['remaining'] > 0 && null !== $state['parts'] ) {
-			$this->last_parts = $state['parts'];
-			return $state['remaining'];
-		}
-		$parts              = $this->count_parts();
-		$state['remaining'] = $parts['tasks'] + $parts['logs'];
-		$state['parts']     = $parts;
-		if ( 0 === $state['remaining'] ) {
+		$parts     = $this->count_parts();
+		$remaining = $parts['tasks'] + $parts['logs'];
+		if ( 0 === $remaining ) {
+			$state = $this->scan_state();
 			// Nothing is left: the next run starts a new pass at the top.
 			$state['phase']        = 'actions';
 			$state['action']       = 0;
@@ -332,9 +312,9 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 			$state['pass_deleted'] = 0;
 			$state['empty_passes'] = 0;
 			$state['from_top']     = true;
+			$this->save_scan_state( $state );
 		}
-		$this->save_scan_state( $state );
-		return $state['remaining'];
+		return $remaining;
 	}
 
 	/**
@@ -362,7 +342,6 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 	public function clean_batch( $limit ) {
 		$limit                  = max( 1, (int) $limit );
 		$this->as_touched       = array();
-		$this->last_deleted     = 0;
 		$this->progressed       = false;
 		$this->pass_end         = false;
 		list( $actions, $logs ) = $this->as_tables();
@@ -376,7 +355,6 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 			$n = PLCLEAN_DB::delete_batch( $table, null === $actions ? '' : self::DELETABLE, $limit );
 			if ( $n > 0 ) {
 				$this->as_touched[] = $table;
-				$this->last_deleted = (int) $n;
 			}
 			return $n;
 		}
@@ -399,7 +377,6 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 			// The rows deleted before the error stay deleted; the scan position is kept for the retry.
 			return false;
 		}
-		$this->last_deleted     = $deleted;
 		$state['pass_deleted'] += $deleted;
 
 		if ( $this->pass_end ) {
