@@ -103,13 +103,19 @@ class PLCLEAN_Rule_Revisions extends PLCLEAN_Rule {
 	 * FROM/WHERE part shared by count() and clean_batch(), prepared: non-autosave revisions whose parent is
 	 * not of an excluded type. Revisions whose parent is missing (orphans) match.
 	 *
-	 * @return string
+	 * @return string|null Null when the posts table name can't be quoted (see PLCLEAN_DB::quote_identifier()).
 	 */
 	private function revisions_sql() {
 		global $wpdb;
+		$posts = PLCLEAN_DB::quote_identifier( $wpdb->posts );
+		if ( null === $posts ) {
+			return null;
+		}
 		$types = $this->excluded_types();
-		$sql   = $wpdb->prepare(
-			"FROM {$wpdb->posts} r LEFT JOIN {$wpdb->posts} p ON p.ID = r.post_parent WHERE r.post_type = 'revision' AND r.post_name NOT LIKE %s",
+		// The posts table is quoted by quote_identifier(); the pattern is prepared.
+		$sql = $wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			"FROM {$posts} r LEFT JOIN {$posts} p ON p.ID = r.post_parent WHERE r.post_type = 'revision' AND r.post_name NOT LIKE %s",
 			$this->autosave_pattern()
 		);
 		if ( array() !== $types ) {
@@ -175,9 +181,13 @@ class PLCLEAN_Rule_Revisions extends PLCLEAN_Rule {
 	 */
 	public function count() {
 		global $wpdb;
+		$from = $this->revisions_sql();
+		if ( null === $from ) {
+			return 0;
+		}
 		// The fragment is prepared in revisions_sql().
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		return (int) $wpdb->get_var( 'SELECT COUNT(*) ' . $this->revisions_sql() );
+		return (int) $wpdb->get_var( 'SELECT COUNT(*) ' . $from );
 	}
 
 	/**
@@ -196,7 +206,7 @@ class PLCLEAN_Rule_Revisions extends PLCLEAN_Rule {
 		// shortcut: each batch re-tries blocked revisions from the start; store a cursor if sites block thousands.
 		$after = 0;
 		$from  = $this->revisions_sql();
-		while ( $deleted < $limit ) {
+		while ( null !== $from && $deleted < $limit ) {
 			// $from is prepared in revisions_sql(); the cursor and limit are prepared here.
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$ids = $wpdb->get_col( 'SELECT r.ID ' . $from . $wpdb->prepare( ' AND r.ID > %d ORDER BY r.ID ASC LIMIT %d', $after, $limit - $deleted ) );

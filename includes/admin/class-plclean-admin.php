@@ -325,6 +325,9 @@ class PLCLEAN_Admin {
 	/**
 	 * Resolve the posted rule, or send a 400 error (unknown or unavailable) or a 403 error (network-wide, not a network administrator).
 	 *
+	 * The network-wide check comes before the availability check, so someone who is not a network administrator gets
+	 * the same 403 whether or not the network-wide tables exist.
+	 *
 	 * @return PLCLEAN_Rule
 	 */
 	private function posted_rule() {
@@ -341,15 +344,6 @@ class PLCLEAN_Admin {
 				400
 			);
 		}
-		if ( ! $rule->is_available() ) {
-			wp_send_json_error(
-				array(
-					'message' => __( 'This source was not found on this site.', 'log-broom' ),
-					'code'    => 'unavailable',
-				),
-				400
-			);
-		}
 		if ( self::is_network_locked( $rule ) ) {
 			wp_send_json_error(
 				array(
@@ -357,6 +351,15 @@ class PLCLEAN_Admin {
 					'code'    => 'network_only',
 				),
 				403
+			);
+		}
+		if ( ! $rule->is_available() ) {
+			wp_send_json_error(
+				array(
+					'message' => __( 'This source was not found on this site.', 'log-broom' ),
+					'code'    => 'unavailable',
+				),
+				400
 			);
 		}
 		return $rule;
@@ -430,20 +433,6 @@ class PLCLEAN_Admin {
 	}
 
 	/**
-	 * Sum of the current sizes of some tables, in bytes.
-	 *
-	 * @param string[] $tables Real table names.
-	 * @return int
-	 */
-	private static function tables_size( array $tables ) {
-		$size = 0;
-		foreach ( $tables as $table ) {
-			$size += PLCLEAN_DB::table_size( $table );
-		}
-		return $size;
-	}
-
-	/**
 	 * AJAX: after a manual clean without optimizing, refresh the statistics (ANALYZE TABLE) of the posted tables of a
 	 * rule (the tables its batches deleted from, as reported in `tables_touched`), then answer with its current sizes,
 	 * as plclean_stats does. Only names that are exactly one of the rule's own tables() are analyzed.
@@ -462,21 +451,41 @@ class PLCLEAN_Admin {
 	 * `tables_touched`). Only names that are exactly one of the rule's own tables() are optimized, so the
 	 * request can never name another table.
 	 *
-	 * The space freed is measured: the tables are analyzed (see PLCLEAN_Cleaner::analyze_tables() for the ones that
-	 * are not) and their size read before optimizing, and read again after. The answer has the rule's sizes (as plclean_stats) plus 'freed' (bytes, never negative).
+	 * Limits, all checked here on the server (see PLCLEAN_Cleaner::optimize_manual()):
+	 * - on multisite, the shared WordPress core tables (is_core() rules) only for a network administrator (403);
+	 * - each table at most once every 10 minutes (skipped as 'throttled');
+	 * - a table over 1 GB only with a posted `large_ok=1`, which the page sends after asking (skipped as
+	 *   'needs_confirmation').
+	 *
+	 * The answer has the rule's sizes (as plclean_stats) plus 'optimized' (table names), 'skipped' (table name =>
+	 * reason), 'freed' (bytes, never negative, measured on analyzed tables only) and 'unmeasured' (optimized tables
+	 * left out of 'freed').
 	 *
 	 * @return void
 	 */
 	public function ajax_optimize() {
 		$this->guard();
-		$rule    = $this->posted_rule();
-		$cleaner = new PLCLEAN_Cleaner();
-		$tables  = PLCLEAN_Cleaner::own_tables( $rule, $this->posted_tables() );
-		$cleaner->analyze_tables( $rule, $tables );
-		$before = self::tables_size( $tables );
-		$cleaner->optimize_tables( $rule, $tables );
-		$out          = self::sizes( $rule );
-		$out['freed'] = max( 0, $before - self::tables_size( $tables ) );
+		$rule = $this->posted_rule();
+		if ( is_multisite() && $rule->is_core() && ! current_user_can( 'manage_network_options' ) ) {
+			// Rebuilding a core table uses the database server every site shares.
+			wp_send_json_error(
+				array(
+					'message' => __( 'Only a network administrator can optimize shared WordPress tables.', 'log-broom' ),
+					'code'    => 'network_only',
+				),
+				403
+			);
+		}
+		// Nonce verified in guard().
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$large_ok = isset( $_POST['large_ok'] ) && '1' === sanitize_key( wp_unslash( $_POST['large_ok'] ) );
+		$result   = ( new PLCLEAN_Cleaner() )->optimize_manual( $rule, $this->posted_tables(), $large_ok );
+
+		$out               = self::sizes( $rule );
+		$out['optimized']  = $result['optimized'];
+		$out['skipped']    = $result['skipped'];
+		$out['freed']      = $result['freed'];
+		$out['unmeasured'] = $result['unmeasured'];
 		wp_send_json_success( $out );
 	}
 

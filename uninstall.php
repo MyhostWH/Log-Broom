@@ -27,6 +27,9 @@ function plclean_uninstall_site() {
 	wp_clear_scheduled_hook( 'plclean_scheduled_clean_continue' );
 }
 
+// When each table was last optimized by hand (one network-wide site option).
+delete_site_option( 'plclean_optimized' );
+
 if ( is_multisite() ) {
 	// Options and cron events are stored per site.
 	$plclean_site_ids = get_sites(

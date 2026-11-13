@@ -18,6 +18,21 @@ class PLCLEAN_Cleaner {
 	 */
 	const PENDING_OPTIMIZE_OPTION = 'plclean_pending_optimize';
 
+	/**
+	 * Site option (network-wide on multisite) holding when each table was last optimized by hand:
+	 * array( table name => Unix time ). Entries older than OPTIMIZE_INTERVAL are dropped when it is saved.
+	 */
+	const OPTIMIZED_OPTION = 'plclean_optimized';
+
+	/** A table can be optimized by hand at most once in this many seconds. */
+	const OPTIMIZE_INTERVAL = 600;
+
+	/**
+	 * Tables larger than this (data plus indexes, bytes) are optimized by hand only after an extra confirmation
+	 * (`large_ok`), and never from cron unless the `plclean_cron_optimize_max_bytes` filter raises the limit.
+	 */
+	const OPTIMIZE_LARGE_BYTES = 1073741824;
+
 	/** Smallest requested batch size for adjustable rules. */
 	const MIN_BATCH = 1000;
 
@@ -289,7 +304,8 @@ class PLCLEAN_Cleaner {
 	 *
 	 * When the whole run is done and optimizing is switched on, only the tables entries were deleted from during
 	 * the run (including earlier continuation runs) are optimized. Only tables of available rules that are not
-	 * is_core() qualify, so the shared WordPress core tables are never optimized from cron.
+	 * is_core() qualify, so the shared WordPress core tables are never optimized from cron. Tables over 1 GB are
+	 * left alone too, unless the `plclean_cron_optimize_max_bytes` filter raises the limit.
 	 *
 	 * A rule that hits a database error is set aside (its error is returned in 'errors') and the run carries on with
 	 * the next rule, so one failing source never blocks the others. The run is done when every rule is done or
@@ -342,12 +358,19 @@ class PLCLEAN_Cleaner {
 		delete_option( self::PENDING_OPTIMIZE_OPTION );
 
 		if ( $settings['optimize'] ) {
+			/**
+			 * Filters the largest table (data plus indexes, bytes) that automatic cleaning optimizes. Rebuilding a
+			 * bigger table can take minutes and slow the site, so it is skipped.
+			 *
+			 * @param int $bytes Default 1 GB.
+			 */
+			$max    = (int) apply_filters( 'plclean_cron_optimize_max_bytes', self::OPTIMIZE_LARGE_BYTES );
 			$wanted = array_unique( $with_deletes );
 			foreach ( PLCLEAN_Registry::all() as $rule ) {
 				if ( $rule->is_core() || ! $rule->is_available() ) {
 					continue;
 				}
-				$wanted = array_diff( $wanted, $this->optimize_tables( $rule, $wanted ) );
+				$wanted = array_diff( $wanted, $this->optimize_tables( $rule, $wanted, $max ) );
 			}
 		}
 
@@ -452,15 +475,101 @@ class PLCLEAN_Cleaner {
 	 * Optimize some of a rule's tables. Only names that are exactly one of the rule's own tables() are
 	 * optimized, so the list may come from untrusted input.
 	 *
-	 * @param PLCLEAN_Rule $rule   Rule.
-	 * @param string[]     $tables Wanted table names.
+	 * @param PLCLEAN_Rule $rule      Rule.
+	 * @param string[]     $tables    Wanted table names.
+	 * @param int|null     $max_bytes Skip tables larger than this (data plus indexes, bytes); null for no limit.
 	 * @return string[] The tables optimized.
 	 */
-	public function optimize_tables( PLCLEAN_Rule $rule, array $tables ) {
-		$done = self::own_tables( $rule, $tables );
-		foreach ( $done as $table ) {
+	public function optimize_tables( PLCLEAN_Rule $rule, array $tables, $max_bytes = null ) {
+		$done = array();
+		foreach ( self::own_tables( $rule, $tables ) as $table ) {
+			if ( null === PLCLEAN_DB::quote_identifier( $table ) ) {
+				continue;
+			}
+			if ( null !== $max_bytes && PLCLEAN_DB::table_size( $table ) > (int) $max_bytes ) {
+				continue;
+			}
 			PLCLEAN_DB::optimize( $table );
+			$done[] = $table;
 		}
 		return $done;
+	}
+
+	/**
+	 * When each table was last optimized by hand, without entries older than OPTIMIZE_INTERVAL.
+	 *
+	 * @param int $now Current Unix time.
+	 * @return int[] Table name => Unix time.
+	 */
+	private static function optimized_times( $now ) {
+		$stored = get_site_option( self::OPTIMIZED_OPTION, array() );
+		$times  = array();
+		foreach ( is_array( $stored ) ? $stored : array() as $table => $time ) {
+			if ( is_string( $table ) && is_numeric( $time ) && $now - (int) $time < self::OPTIMIZE_INTERVAL ) {
+				$times[ $table ] = (int) $time;
+			}
+		}
+		return $times;
+	}
+
+	/**
+	 * Optimize some of a rule's tables by hand (after a manual clean), with the limits a manual request needs:
+	 *
+	 * - only names that are exactly one of the rule's own tables() (the list may come from untrusted input);
+	 * - each table at most once every OPTIMIZE_INTERVAL seconds (others are skipped as 'throttled');
+	 * - a table larger than OPTIMIZE_LARGE_BYTES only when $large_ok (others are skipped as 'needs_confirmation').
+	 *
+	 * The space freed is measured: the tables are analyzed (see analyze_tables() for the ones that are not) and
+	 * their size read before optimizing, and read again after. A table of a plugin rule that was too large to
+	 * analyze has a stale size before optimizing, so it is left out of 'freed' and counted in 'unmeasured'.
+	 *
+	 * @param PLCLEAN_Rule $rule     Rule.
+	 * @param array        $tables   Wanted table names.
+	 * @param bool         $large_ok Whether the user confirmed optimizing tables over OPTIMIZE_LARGE_BYTES.
+	 * @return array array( 'optimized' => string[], 'skipped' => array( table => 'throttled'|'needs_confirmation' ),
+	 *               'freed' => int bytes, never negative, 'unmeasured' => int ).
+	 */
+	public function optimize_manual( PLCLEAN_Rule $rule, array $tables, $large_ok ) {
+		$now     = time();
+		$times   = self::optimized_times( $now );
+		$run     = array();
+		$skipped = array();
+		foreach ( self::own_tables( $rule, $tables ) as $table ) {
+			if ( isset( $times[ $table ] ) ) {
+				$skipped[ $table ] = 'throttled';
+			} elseif ( ! $large_ok && PLCLEAN_DB::table_size( $table ) > self::OPTIMIZE_LARGE_BYTES ) {
+				$skipped[ $table ] = 'needs_confirmation';
+			} else {
+				$run[] = $table;
+			}
+		}
+
+		$analyzed = $this->analyze_tables( $rule, $run );
+		// Core rules are never analyzed (shared WordPress tables); they are measured as the server reports them.
+		$measured = $rule->is_core() ? $run : array_values( array_intersect( $run, $analyzed ) );
+		$before   = 0;
+		foreach ( $measured as $table ) {
+			$before += PLCLEAN_DB::table_size( $table );
+		}
+
+		if ( array() !== $run ) {
+			// Recorded before optimizing, so a request sent while this one still runs is turned away.
+			foreach ( $run as $table ) {
+				$times[ $table ] = $now;
+			}
+			update_site_option( self::OPTIMIZED_OPTION, $times );
+		}
+		$optimized = $this->optimize_tables( $rule, $run );
+
+		$after = 0;
+		foreach ( $measured as $table ) {
+			$after += PLCLEAN_DB::table_size( $table );
+		}
+		return array(
+			'optimized'  => $optimized,
+			'skipped'    => $skipped,
+			'freed'      => max( 0, $before - $after ),
+			'unmeasured' => count( $run ) - count( $measured ),
+		);
 	}
 }

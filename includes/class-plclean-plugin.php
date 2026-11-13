@@ -59,11 +59,36 @@ class PLCLEAN_Plugin {
 	}
 
 	/**
-	 * Deactivation callback.
+	 * Deactivation callback. Deactivated network-wide, it clears every site of the network, as uninstall.php does.
+	 *
+	 * @param bool $network_wide Whether the plugin is deactivated for the whole network.
+	 * @return void
+	 */
+	public static function deactivate( $network_wide = false ) {
+		if ( ! is_multisite() || ! $network_wide ) {
+			self::deactivate_site();
+			return;
+		}
+		// Cron events and run state are stored per site.
+		$site_ids = get_sites(
+			array(
+				'fields' => 'ids',
+				'number' => 0,
+			)
+		);
+		foreach ( $site_ids as $site_id ) {
+			switch_to_blog( $site_id );
+			self::deactivate_site();
+			restore_current_blog();
+		}
+	}
+
+	/**
+	 * Clear the current site's events and run state.
 	 *
 	 * @return void
 	 */
-	public static function deactivate() {
+	private static function deactivate_site() {
 		wp_clear_scheduled_hook( PLCLEAN_Scheduler::HOOK );
 		wp_clear_scheduled_hook( PLCLEAN_Scheduler::CONTINUE_HOOK );
 		// The interrupted run is abandoned: forget its tables waiting to be optimized, its running total, its errors

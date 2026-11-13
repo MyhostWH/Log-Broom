@@ -48,8 +48,14 @@ abstract class PLCLEAN_Rule_Table extends PLCLEAN_Rule {
 				if ( null === $parent ) {
 					$where = '';
 				} else {
-					// Identifiers come from rule code, never user input.
-					$where = "NOT EXISTS (SELECT 1 FROM `{$parent}` p WHERE p.`{$parent_col}` = `{$table}`.`{$child_col}`)";
+					// Identifiers come from find_table() and rule code, never user input; each is quoted by quote_identifier().
+					$quoted = array_map( array( 'PLCLEAN_DB', 'quote_identifier' ), array( $parent, $parent_col, $table, $child_col ) );
+					if ( in_array( null, $quoted, true ) ) {
+						// A name that can't be quoted: skip the table.
+						continue;
+					}
+					list( $q_parent, $q_parent_col, $q_table, $q_child_col ) = $quoted;
+					$where = "NOT EXISTS (SELECT 1 FROM {$q_parent} p WHERE p.{$q_parent_col} = {$q_table}.{$q_child_col})";
 				}
 			}
 			$out[] = array(

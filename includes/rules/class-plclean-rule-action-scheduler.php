@@ -279,11 +279,13 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 				'logs'  => 0,
 			);
 		} else {
+			$qa        = PLCLEAN_DB::quote_identifier( $actions );
+			$ql        = PLCLEAN_DB::quote_identifier( $logs );
 			$deletable = self::DELETABLE;
 			$kept      = self::KEPT_A;
-			// Tables are resolved by find_table(); the conditions are static fragments from this class; live count must not be cached.
+			// Tables are resolved by find_table() and quoted by quote_identifier(); the conditions are static fragments from this class; live count must not be cached.
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$row   = $wpdb->get_row( "SELECT (SELECT COUNT(*) FROM `{$actions}` WHERE {$deletable}) AS tasks, (SELECT COUNT(*) FROM `{$logs}`) - (SELECT COUNT(*) FROM `{$actions}` a JOIN `{$logs}` l ON l.`action_id` = a.`action_id` WHERE {$kept}) AS logs", ARRAY_A );
+			$row   = $wpdb->get_row( "SELECT (SELECT COUNT(*) FROM {$qa} WHERE {$deletable}) AS tasks, (SELECT COUNT(*) FROM {$ql}) - (SELECT COUNT(*) FROM {$qa} a JOIN {$ql} l ON l.`action_id` = a.`action_id` WHERE {$kept}) AS logs", ARRAY_A );
 			$parts = array(
 				'tasks' => max( 0, (int) ( $row['tasks'] ?? 0 ) ),
 				'logs'  => max( 0, (int) ( $row['logs'] ?? 0 ) ),
@@ -442,18 +444,19 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 	 */
 	private function actions_phase( $actions, $logs, $limit, array &$state ) {
 		global $wpdb;
-		// Tables are resolved by find_table().
+		$qa = PLCLEAN_DB::quote_identifier( $actions );
+		// Tables are resolved by find_table() and quoted by quote_identifier().
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$max       = (int) $wpdb->get_var( "SELECT MAX(`action_id`) FROM `{$actions}`" );
+		$max       = (int) $wpdb->get_var( "SELECT MAX(`action_id`) FROM {$qa}" );
 		$end       = min( $max, $state['action'] + $this->action_span() );
 		$deletable = self::DELETABLE;
 		$deleted   = 0;
 		$left      = $limit;
 		while ( $left > 0 && $state['action'] < $end ) {
 			$want = min( self::ACTION_CHUNK, $left );
-			// Table is resolved by find_table(); the condition is a static fragment from this class; the window and limit are prepared.
+			// Table is resolved by find_table() and quoted by quote_identifier(); the condition is a static fragment from this class; the window and limit are prepared.
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$ids = $wpdb->get_col( $wpdb->prepare( "SELECT `action_id` FROM `{$actions}` WHERE `action_id` > %d AND `action_id` <= %d AND {$deletable} ORDER BY `action_id` LIMIT %d", $state['action'], $end, $want ) );
+			$ids = $wpdb->get_col( $wpdb->prepare( "SELECT `action_id` FROM {$qa} WHERE `action_id` > %d AND `action_id` <= %d AND {$deletable} ORDER BY `action_id` LIMIT %d", $state['action'], $end, $want ) );
 			if ( '' !== $wpdb->last_error ) {
 				return false;
 			}
@@ -490,16 +493,18 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 	 */
 	private function orphan_phase( $actions, $logs, $limit, array &$state ) {
 		global $wpdb;
-		// Tables are resolved by find_table().
+		$qa = PLCLEAN_DB::quote_identifier( $actions );
+		$ql = PLCLEAN_DB::quote_identifier( $logs );
+		// Tables are resolved by find_table() and quoted by quote_identifier().
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$max = (int) $wpdb->get_var( "SELECT MAX(`log_id`) FROM `{$logs}`" );
+		$max = (int) $wpdb->get_var( "SELECT MAX(`log_id`) FROM {$ql}" );
 		$end = min( $max, $state['log'] + $this->log_span() );
 		$ids = array();
 		if ( $state['log'] < $end ) {
-			// Tables are resolved by find_table(); the window and the limit are prepared. The scan reads the primary key
+			// Tables are resolved by find_table() and quoted by quote_identifier(); the window and the limit are prepared. The scan reads the primary key
 			// from the cursor to the end of the window, looking each action up by its primary key.
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$ids = $wpdb->get_col( $wpdb->prepare( "SELECT l.`log_id` FROM `{$logs}` l LEFT JOIN `{$actions}` a ON a.`action_id` = l.`action_id` WHERE a.`action_id` IS NULL AND l.`log_id` > %d AND l.`log_id` <= %d ORDER BY l.`log_id` LIMIT %d", $state['log'], $end, $limit ) );
+			$ids = $wpdb->get_col( $wpdb->prepare( "SELECT l.`log_id` FROM {$ql} l LEFT JOIN {$qa} a ON a.`action_id` = l.`action_id` WHERE a.`action_id` IS NULL AND l.`log_id` > %d AND l.`log_id` <= %d ORDER BY l.`log_id` LIMIT %d", $state['log'], $end, $limit ) );
 			if ( '' !== $wpdb->last_error ) {
 				return false;
 			}
@@ -548,6 +553,8 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 	 */
 	private function delete_actions_with_logs( $actions, $logs, array $ids ) {
 		global $wpdb;
+		$qa        = PLCLEAN_DB::quote_identifier( $actions );
+		$ql        = PLCLEAN_DB::quote_identifier( $logs );
 		$deletable = self::DELETABLE;
 		$first     = (int) reset( $ids );
 		$last      = (int) end( $ids );
@@ -555,9 +562,9 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 			$deleted = 0;
 			foreach ( array_chunk( $ids, self::IN_CHUNK ) as $chunk ) {
 				$in = implode( ',', array_map( 'absint', $chunk ) );
-				// Table is resolved by find_table(); the condition is a static fragment from this class; $in is a list of absint() ids.
+				// Table is resolved by find_table() and quoted by quote_identifier(); the condition is a static fragment from this class; $in is a list of absint() ids.
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
-				$n = $wpdb->query( "DELETE FROM `{$actions}` WHERE `action_id` IN ({$in}) AND {$deletable}" );
+				$n = $wpdb->query( "DELETE FROM {$qa} WHERE `action_id` IN ({$in}) AND {$deletable}" );
 				if ( false === $n ) {
 					return false;
 				}
@@ -574,9 +581,9 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 			return $deleted;
 		}
 
-		// Table is resolved by find_table(); the condition is a static fragment from this class; the range is prepared.
+		// Table is resolved by find_table() and quoted by quote_identifier(); the condition is a static fragment from this class; the range is prepared.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$n = $wpdb->query( $wpdb->prepare( "DELETE FROM `{$actions}` WHERE `action_id` BETWEEN %d AND %d AND {$deletable}", $first, $last ) );
+		$n = $wpdb->query( $wpdb->prepare( "DELETE FROM {$qa} WHERE `action_id` BETWEEN %d AND %d AND {$deletable}", $first, $last ) );
 		if ( false === $n ) {
 			return false;
 		}
@@ -587,7 +594,7 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 
 		// Only entries whose action no longer exists: an action that is not finished any more keeps its entries.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$n = $wpdb->query( $wpdb->prepare( "DELETE FROM `{$logs}` WHERE `action_id` BETWEEN %d AND %d AND NOT EXISTS (SELECT 1 FROM `{$actions}` p WHERE p.`action_id` = `{$logs}`.`action_id`)", $first, $last ) );
+		$n = $wpdb->query( $wpdb->prepare( "DELETE FROM {$ql} WHERE `action_id` BETWEEN %d AND %d AND NOT EXISTS (SELECT 1 FROM {$qa} p WHERE p.`action_id` = {$ql}.`action_id`)", $first, $last ) );
 		if ( false === $n ) {
 			return false;
 		}
@@ -608,14 +615,16 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 	 */
 	private function delete_logs_in( $actions, $logs, $column, array $ids ) {
 		global $wpdb;
+		$qa = PLCLEAN_DB::quote_identifier( $actions );
+		$ql = PLCLEAN_DB::quote_identifier( $logs );
 		if ( array() === $ids ) {
 			return 0;
 		}
 		$column = '`log_id`' === $column ? '`log_id`' : '`action_id`';
 		$in     = implode( ',', array_map( 'absint', $ids ) );
-		// Table is resolved by find_table(); the column is one of two fixed names; $in is a list of absint() ids; the action is checked again.
+		// Table is resolved by find_table() and quoted by quote_identifier(); the column is one of two fixed names; $in is a list of absint() ids; the action is checked again.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$n = $wpdb->query( "DELETE FROM `{$logs}` WHERE {$column} IN ({$in}) AND NOT EXISTS (SELECT 1 FROM `{$actions}` p WHERE p.`action_id` = `{$logs}`.`action_id`)" );
+		$n = $wpdb->query( "DELETE FROM {$ql} WHERE {$column} IN ({$in}) AND NOT EXISTS (SELECT 1 FROM {$qa} p WHERE p.`action_id` = {$ql}.`action_id`)" );
 		if ( false === $n ) {
 			return false;
 		}

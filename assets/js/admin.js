@@ -1366,6 +1366,9 @@
 		run.optimize = $schedule.find( 'input[name="optimize"]' ).prop( 'checked' );
 		run.optimized = false;
 		run.freed = 0;
+		run.unmeasured = 0; // Optimized tables too large to measure (left out of the freed figure).
+		run.throttled = []; // Sources with a table the server skipped because it was optimized in the last 10 minutes.
+		const large = []; // Per source: tables over 1 GB the server optimizes only once the user confirms.
 		for ( const id of run.cleaned ) {
 			// Only the tables entries were removed from; the server ignores any that are not this source's.
 			if ( ! run.touched[ id ].length ) {
@@ -1378,19 +1381,96 @@
 			renderProgress( run, run.optimize ? __( 'Optimizing tables…', 'log-broom' ) : __( 'Updating table sizes…', 'log-broom' ) );
 			try {
 				const result = await post( run.optimize ? 'plclean_optimize' : 'plclean_analyze', { rule: id, tables: run.touched[ id ] } );
-				sources[ id ].size = parseInt( result.size, 10 ) || 0;
-				renderTables( id, result.tables );
-				if ( run.optimize ) {
-					run.optimized = true;
-					run.freed += Math.max( 0, parseInt( result.freed, 10 ) || 0 );
+				applySizes( run, id, result );
+				const waiting = skippedTables( result, 'needs_confirmation' );
+				if ( run.optimize && waiting.length ) {
+					large.push( { id, tables: waiting } );
 				}
 			} catch ( error ) {
 				// Optimizing and fresh sizes are a bonus; the entries are already removed.
 			}
 		}
 
+		// The server decides which tables are too large and refuses them without `large_ok`; this only asks.
+		if ( large.length && ( await confirmLargeTables( large ) ) ) {
+			for ( const item of large ) {
+				renderProgress( run, __( 'Optimizing tables…', 'log-broom' ) );
+				try {
+					applySizes( run, item.id, await post( 'plclean_optimize', { rule: item.id, tables: item.tables, large_ok: 1 } ) );
+				} catch ( error ) {
+					// As above: a bonus.
+				}
+			}
+		}
+
 		ui.busy = false;
 		renderSuccess( run );
+	}
+
+	/**
+	 * Names of the tables an optimize answer skipped for a reason.
+	 *
+	 * @param {Object} result Answer of plclean_optimize or plclean_analyze.
+	 * @param {string} reason throttled | needs_confirmation.
+	 * @return {string[]} Table names.
+	 */
+	function skippedTables( result, reason ) {
+		const skipped = result && result.skipped && 'object' === typeof result.skipped && ! Array.isArray( result.skipped ) ? result.skipped : {};
+		return Object.keys( skipped ).filter( ( table ) => reason === skipped[ table ] );
+	}
+
+	/**
+	 * Take in an analyze or optimize answer: current sizes, and with "Optimize tables" on, the space freed, the tables
+	 * too large to measure and the tables skipped as optimized recently.
+	 *
+	 * @param {Object} run    Run state.
+	 * @param {string} id     Rule id.
+	 * @param {Object} result Answer.
+	 */
+	function applySizes( run, id, result ) {
+		sources[ id ].size = parseInt( result.size, 10 ) || 0;
+		renderTables( id, result.tables );
+		if ( ! run.optimize ) {
+			return;
+		}
+		run.optimized = true;
+		run.freed += Math.max( 0, parseInt( result.freed, 10 ) || 0 );
+		run.unmeasured += Math.max( 0, parseInt( result.unmeasured, 10 ) || 0 );
+		if ( skippedTables( result, 'throttled' ).length && run.throttled.indexOf( id ) < 0 ) {
+			run.throttled.push( id );
+		}
+	}
+
+	/**
+	 * Ask before optimizing tables over 1 GB. The progress view comes back when optimizing goes on.
+	 *
+	 * @param {Object[]} large Per source: { id, tables }.
+	 * @return {Promise<boolean>} Whether to optimize them.
+	 */
+	function confirmLargeTables( large ) {
+		return new Promise( ( resolve ) => {
+			const $list = $( '<ul class="plclean-dialog-list plclean-large-tables"></ul>' );
+			large.forEach( ( item ) => {
+				item.tables.forEach( ( table ) => $list.append( $( '<li>' ).text( table ) ) );
+			} );
+			const $skip = $( '<button type="button" class="button plclean-large-skip"></button>' ).text( __( 'Skip large tables', 'log-broom' ) );
+			const $go = $( '<button type="button" class="button button-primary plclean-large-ok"></button>' ).text( __( 'Optimize large tables', 'log-broom' ) );
+			renderDialog( {
+				title: document.createTextNode( __( 'Optimize large tables?', 'log-broom' ) ),
+				headerIcon: 'warning',
+				tone: 'warning',
+				closable: false,
+				body: [
+					$( '<p class="plclean-dialog-lead plclean-large-question"></p>' ).text( __( 'Optimizing large tables can take several minutes and slow the site. Continue?', 'log-broom' ) ),
+					$list,
+				],
+				footer: [ $skip, $go ],
+				focus: $skip,
+			} );
+			announce( __( 'Optimizing large tables can take several minutes and slow the site. Continue?', 'log-broom' ), true );
+			$skip.on( 'click', () => resolve( false ) );
+			$go.on( 'click', () => resolve( true ) );
+		} );
 	}
 
 	/**
@@ -1525,18 +1605,29 @@
 		// database keeps the space for new rows and the disk use does not change.
 		const freed = run.optimized ? run.freed : 0;
 		const n = run.deleted;
-		const title = freed > 0
-			? sprintf(
+		let title;
+		if ( freed > 0 && run.unmeasured > 0 ) {
+			// Tables too large to analyze have a stale size before optimizing: they are left out of the figure.
+			title = sprintf(
+				/* translators: 1: number of entries, 2: data size. */
+				_n( 'Done! Removed %1$s entry and freed about %2$s (large tables not measured).', 'Done! Removed %1$s entries and freed about %2$s (large tables not measured).', n, 'log-broom' ),
+				fmt( n ),
+				formatBytes( freed )
+			);
+		} else if ( freed > 0 ) {
+			title = sprintf(
 				/* translators: 1: number of entries, 2: data size. */
 				_n( 'Done! Removed %1$s entry and freed about %2$s.', 'Done! Removed %1$s entries and freed about %2$s.', n, 'log-broom' ),
 				fmt( n ),
 				formatBytes( freed )
-			)
-			: sprintf(
+			);
+		} else {
+			title = sprintf(
 				/* translators: %s: number of entries. */
 				_n( 'Done! Removed %s entry.', 'Done! Removed %s entries.', n, 'log-broom' ),
 				fmt( n )
 			);
+		}
 
 		const body = [ checklist( run ) ];
 		if ( run.skipped.length ) {
@@ -1570,6 +1661,22 @@
 				);
 			} );
 			body.push( $list );
+		}
+		if ( run.throttled && run.throttled.length ) {
+			const $throttled = $( '<ul class="plclean-dialog-stalled plclean-dialog-throttled"></ul>' );
+			run.throttled.forEach( ( id ) => {
+				$throttled.append(
+					$( '<li>' ).append(
+						icon( 'clock' ),
+						$( '<span>' ).append(
+							$( '<strong>' ).text( sources[ id ].label ),
+							' ',
+							document.createTextNode( __( 'Optimized recently — skipped', 'log-broom' ) )
+						)
+					)
+				);
+			} );
+			body.push( $throttled );
 		}
 		const note = ! run.optimize && n > 0 ? __( 'The database reuses this space for new data; turn on “Optimize tables” to return it to the disk.', 'log-broom' ) : '';
 		if ( note ) {

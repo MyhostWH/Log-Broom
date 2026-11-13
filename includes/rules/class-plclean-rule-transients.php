@@ -116,8 +116,12 @@ class PLCLEAN_Rule_Transients extends PLCLEAN_Rule {
 		$value   = $sitemeta ? 'meta_value' : 'option_value';
 		$offset  = strlen( $prefix ) + 1;
 		$timeout = $prefix . 'timeout_';
+		$table   = PLCLEAN_DB::quote_identifier( $table );
+		if ( null === $table ) {
+			return 0;
+		}
 
-		// Table and column names are fixed internally; values are prepared.
+		// Table and column names are fixed internally (the table is quoted by quote_identifier()); values are prepared.
 		// phpcs:disable PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(

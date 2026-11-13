@@ -27,7 +27,34 @@ class PLCLEAN_DB {
 	private static $fresh_stats = false;
 
 	/**
-	 * Find the real name of a table, matching case-insensitively.
+	 * Characters a table name may have. Anything else (a backtick, a space, a dot, a hyphen…) is refused, so a
+	 * table name can never change the SQL it is put into. `D` stops `$` from also matching before a final newline.
+	 */
+	const IDENTIFIER_PATTERN = '/^[A-Za-z0-9_$]+$/D';
+
+	/**
+	 * A table name ready for SQL: wrapped in backticks, or null when the name does not match IDENTIFIER_PATTERN.
+	 * Callers skip the table on null.
+	 *
+	 * @param mixed $name Table name.
+	 * @return string|null
+	 */
+	public static function quote_identifier( $name ) {
+		if ( ! is_string( $name ) || ! preg_match( self::IDENTIFIER_PATTERN, $name ) ) {
+			return null;
+		}
+		return '`' . $name . '`';
+	}
+
+	/**
+	 * Find the real name of a table, matching case-insensitively. A table whose name could not be quoted (see
+	 * quote_identifier()) is never returned, so its rule skips it.
+	 *
+	 * The prefix part of the LIKE pattern is case-sensitive on servers with case-sensitive table names, and the
+	 * suffix is compared case-insensitively. If two tables share the prefix and differ only in the case of the
+	 * suffix (for example a legacy wp_wfHits next to wp_wfhits), the first one SHOW TABLES lists wins. This is
+	 * intentional: both belong to the same plugin, and a table under another install's differently-cased prefix
+	 * can never match.
 	 *
 	 * @param string $suffix Table name without the prefix.
 	 * @param bool   $global Use the network base prefix instead of the site prefix.
@@ -50,7 +77,7 @@ class PLCLEAN_DB {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$tables = $wpdb->get_col( $wpdb->prepare( 'SHOW TABLES LIKE %s', $like ) );
 		foreach ( (array) $tables as $table ) {
-			if ( strtolower( $table ) === $wanted ) {
+			if ( strtolower( $table ) === $wanted && null !== self::quote_identifier( $table ) ) {
 				$found = $table;
 				break;
 			}
@@ -139,11 +166,15 @@ class PLCLEAN_DB {
 	public static function count( $table, $where = '' ) {
 		global $wpdb;
 
-		$sql = "SELECT COUNT(*) FROM `{$table}`";
+		$quoted = self::quote_identifier( $table );
+		if ( null === $quoted ) {
+			return 0;
+		}
+		$sql = "SELECT COUNT(*) FROM {$quoted}";
 		if ( '' !== $where ) {
 			$sql .= " WHERE {$where}";
 		}
-		// Table is resolved by find_table(); $where is a static fragment from rule code; live count must not be cached.
+		// Table is resolved by find_table() and quoted by quote_identifier(); $where is a static fragment from rule code; live count must not be cached.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		return (int) $wpdb->get_var( $sql );
 	}
@@ -154,19 +185,23 @@ class PLCLEAN_DB {
 	 * @param string $table Real table name from find_table().
 	 * @param string $where Static SQL condition from rule code (no WHERE keyword), or empty.
 	 * @param int    $limit Maximum rows to delete.
-	 * @return int|false Rows deleted, or false when the database refused the DELETE (lock wait timeout,
+	 * @return int|false Rows deleted (0 for a name quote_identifier() refuses), or false when the database refused the DELETE (lock wait timeout,
 	 *                   deadlock, read-only server…); $wpdb->last_error then holds the reason.
 	 */
 	public static function delete_batch( $table, $where, $limit ) {
 		global $wpdb;
 
+		$quoted = self::quote_identifier( $table );
+		if ( null === $quoted ) {
+			return 0;
+		}
 		$limit = max( 1, (int) $limit );
-		$sql   = "DELETE FROM `{$table}`";
+		$sql   = "DELETE FROM {$quoted}";
 		if ( '' !== $where ) {
 			$sql .= " WHERE {$where}";
 		}
 		$sql .= " LIMIT {$limit}";
-		// Table is resolved by find_table(); $where is a static fragment from rule code; $limit is an int.
+		// Table is resolved by find_table() and quoted by quote_identifier(); $where is a static fragment from rule code; $limit is an int.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$deleted = $wpdb->query( $sql );
 		return false === $deleted ? false : (int) $deleted;
@@ -182,9 +217,13 @@ class PLCLEAN_DB {
 	public static function analyze( $table ) {
 		global $wpdb;
 
-		// Table is resolved by find_table().
+		$quoted = self::quote_identifier( $table );
+		if ( null === $quoted ) {
+			return;
+		}
+		// Table is resolved by find_table() and quoted by quote_identifier().
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$wpdb->query( "ANALYZE TABLE `{$table}`" );
+		$wpdb->query( "ANALYZE TABLE {$quoted}" );
 	}
 
 	/**
@@ -196,8 +235,12 @@ class PLCLEAN_DB {
 	public static function optimize( $table ) {
 		global $wpdb;
 
-		// Table is resolved by find_table().
+		$quoted = self::quote_identifier( $table );
+		if ( null === $quoted ) {
+			return;
+		}
+		// Table is resolved by find_table() and quoted by quote_identifier().
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$wpdb->query( "OPTIMIZE TABLE `{$table}`" );
+		$wpdb->query( "OPTIMIZE TABLE {$quoted}" );
 	}
 }
