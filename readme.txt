@@ -4,7 +4,7 @@ Tags: database, cleanup, logs, revisions, transients
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -31,7 +31,7 @@ Sources from other plugins appear only when that plugin's tables exist on your s
 * WP Activity Log: deletes the recorded events and their details. Activity log settings are kept.
 * Wordfence: deletes the live traffic, login attempt, scan activity and scan scratch data tables. Wordfence settings, blocked IPs and 2FA are kept.
 * Action Scheduler (used by WooCommerce and other plugins): deletes completed, canceled and failed actions and their log entries. Pending and in-progress tasks are kept.
-* Solid Security: deletes the event log, temporary attempt records and lockouts that have already expired. Active lockouts are kept.
+* Solid Security: deletes the event log, attempt counters older than one day, and lockouts that expired before its "Days to Remember Lockouts" period (default 7 days), matching Solid Security's own cleanup. Active lockouts, recent lockouts used for repeat-offender bans, attempt counters from the last day and bans are kept.
 
 Plugin names are used only to describe what each source cleans. This plugin is not affiliated with or endorsed by them.
 
@@ -92,10 +92,19 @@ Log Broom does not collect, store or send any personal data, makes no external r
 
 == Changelog ==
 
+= 1.0.1 =
+* Fix: automatic cleaning no longer forgets sources whose plugin is temporarily inactive when you save settings.
+* Fix: saving settings no longer postpones the next automatic cleaning.
+* Fix: post revisions that another plugin protects no longer block cleaning of the rest.
+* Thanks to Yossi Gueta for the report and fixes.
+
 = 1.0.0 =
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.0.1 =
+Fixes settings saves that dropped sources of inactive plugins or delayed the next automatic cleaning, and protected revisions that blocked cleaning.
 
 = 1.0.0 =
 Initial release.
