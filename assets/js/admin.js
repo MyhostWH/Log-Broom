@@ -391,7 +391,7 @@
 			return;
 		}
 		/* translators: %s: number of entries. */
-		const parts = _n( '%s entry', '%s entries', n, 'log-broom' ).split( /%(?:1\$)?s/ );
+		const parts = _n( '%s entry', '%s entries', n, 'log-broom' ).split( '%s' );
 		Array.prototype.slice.call( line.childNodes ).forEach( ( node ) => {
 			if ( node !== strong ) {
 				line.removeChild( node );
@@ -399,7 +399,7 @@
 		} );
 		strong.textContent = fmt( n );
 		line.insertBefore( document.createTextNode( parts[ 0 ] ), strong );
-		line.appendChild( document.createTextNode( parts.slice( 1 ).join( '' ) ) );
+		line.appendChild( document.createTextNode( parts.slice( 1 ).join( '%s' ) ) );
 	}
 
 	/** Refresh the summary card from the current source data. */
@@ -1427,13 +1427,6 @@
 	 * the final mode and size once.
 	 */
 	let pickingMode = false;
-	let pickTimer = 0;
-
-	/**
-	 * How long after the press is released a click may still arrive. On touch screens the compatibility mouse
-	 * events, the focus change and the click come after pointerup, possibly in a later task.
-	 */
-	const PICK_CLICK_WAIT = 500;
 
 	/** Clamp the typed size, show it, and save it (on `change`, Enter or blur; never while typing). */
 	function commitBatchSize() {
@@ -1451,45 +1444,22 @@
 		saveBatch( 'fixed', size );
 	}
 
-	/**
-	 * End a mode pick: remove its listeners and, when no mode change handled it (released elsewhere, or a tap on the
-	 * mode already chosen), commit the typed size.
-	 */
-	function endPick() {
-		window.clearTimeout( pickTimer );
-		document.removeEventListener( 'click', onPickClick, true );
-		document.removeEventListener( 'pointerup', onPickRelease, true );
-		document.removeEventListener( 'pointercancel', onPickRelease, true );
-		document.removeEventListener( 'mouseup', onPickRelease, true );
-		if ( pickingMode ) {
-			pickingMode = false;
-			commitBatchSize();
-		}
-	}
-
-	/** The pick's click: end the pick once the click (and the radio's `change`, if any) has been handled. */
-	function onPickClick() {
-		window.clearTimeout( pickTimer );
-		pickTimer = window.setTimeout( endPick, 0 );
-	}
-
-	/** Press released: end the pick only if no click follows in time. */
-	function onPickRelease() {
-		window.clearTimeout( pickTimer );
-		pickTimer = window.setTimeout( endPick, PICK_CLICK_WAIT );
-	}
-
 	$batch.on( 'pointerdown mousedown', '.plclean-batch-options label, input[name="batch_mode"]', function ( event ) {
 		const radio = 'batch_mode' === event.target.name ? event.target : $( this ).find( 'input[name="batch_mode"]' )[ 0 ];
 		if ( ! radio || pickingMode ) {
 			return;
 		}
 		pickingMode = true;
-		window.clearTimeout( pickTimer );
-		document.addEventListener( 'click', onPickClick, true );
-		document.addEventListener( 'pointerup', onPickRelease, true );
-		document.addEventListener( 'pointercancel', onPickRelease, true );
-		document.addEventListener( 'mouseup', onPickRelease, true );
+		// A press that ends without a mode change (released elsewhere, or on the mode already chosen) still
+		// commits a typed size, once the click (if any) has been handled.
+		$( document ).one( 'pointerup mouseup pointercancel', () => {
+			window.setTimeout( () => {
+				if ( pickingMode ) {
+					pickingMode = false;
+					commitBatchSize();
+				}
+			}, 0 );
+		} );
 	} );
 
 	$batch.on( 'change', 'input[name="batch_mode"]', function () {

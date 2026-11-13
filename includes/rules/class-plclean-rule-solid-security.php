@@ -8,7 +8,7 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Cleans the Solid Security event log, old attempt counters and old lockouts.
+ * Cleans Solid Security: logs and expired lockouts data.
  */
 class PLCLEAN_Rule_Solid_Security extends PLCLEAN_Rule_Table {
 
@@ -37,7 +37,7 @@ class PLCLEAN_Rule_Solid_Security extends PLCLEAN_Rule_Table {
 	 * @return string
 	 */
 	public function label() {
-		return __( 'Solid Security: logs and old lockouts', 'log-broom' );
+		return __( 'Solid Security: logs and expired lockouts', 'log-broom' );
 	}
 
 	/**
@@ -46,7 +46,7 @@ class PLCLEAN_Rule_Solid_Security extends PLCLEAN_Rule_Table {
 	 * @return string
 	 */
 	public function description() {
-		return __( 'Deletes the whole Solid Security event log, attempt counters older than one day, and lockouts that expired longer ago than the "Days to Remember Lockouts" period plus one day. Attempt counters and lockouts follow the same retention as Solid Security\'s own cleanup.', 'log-broom' );
+		return __( 'Deletes the Solid Security event log, attempt counters older than one day and lockouts that expired before the "Days to Remember Lockouts" period, the same data Solid Security purges itself.', 'log-broom' );
 	}
 
 	/**
