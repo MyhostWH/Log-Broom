@@ -16,16 +16,22 @@ class PLCLEAN_Scheduler {
 	const CONTINUE_HOOK = 'plclean_scheduled_clean_continue';
 
 	/**
-	 * Replace the recurring event according to the schedule setting.
+	 * Replace the recurring event according to the schedule setting. An event that already has the wanted
+	 * recurrence is left alone, so saving other settings does not move the next run.
 	 *
 	 * @param string $schedule off|daily|weekly.
 	 * @return void
 	 */
 	public static function sync( $schedule ) {
-		wp_clear_scheduled_hook( self::HOOK );
 		if ( in_array( $schedule, array( 'daily', 'weekly' ), true ) ) {
+			$event = wp_get_scheduled_event( self::HOOK );
+			if ( $event && $schedule === $event->schedule ) {
+				return;
+			}
+			wp_clear_scheduled_hook( self::HOOK );
 			wp_schedule_event( time() + HOUR_IN_SECONDS, $schedule, self::HOOK );
 		} else {
+			wp_clear_scheduled_hook( self::HOOK );
 			// Turning automatic cleaning off also cancels a pending continuation and forgets its partial run.
 			wp_clear_scheduled_hook( self::CONTINUE_HOOK );
 			delete_option( PLCLEAN_Cleaner::PENDING_OPTIMIZE_OPTION );

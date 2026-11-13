@@ -404,6 +404,9 @@ class PLCLEAN_Admin {
 	 * must not re-arm or intensify automatic cleaning of network-wide logs, so such a save drops them and a
 	 * network administrator has to include them again.
 	 *
+	 * Stored rules that are not available right now (their plugin is inactive or its table is missing) have no
+	 * switch on the page, so they cannot be posted; they are kept so they clean again when the plugin returns.
+	 *
 	 * @param string[] $posted      Posted rule ids.
 	 * @param bool     $keep_locked Keep the stored network-wide rules the current user may not change.
 	 * @return string[]
@@ -416,12 +419,13 @@ class PLCLEAN_Admin {
 				$out[] = $id;
 			}
 		}
-		if ( ! $keep_locked ) {
-			return array_values( array_unique( $out ) );
-		}
 		foreach ( PLCLEAN_Settings::get()['enabled_rules'] as $id ) {
 			$rule = PLCLEAN_Registry::get( $id );
-			if ( null !== $rule && self::is_network_locked( $rule ) ) {
+			if ( null === $rule ) {
+				continue;
+			}
+			$keep = self::is_network_locked( $rule ) ? $keep_locked : ! $rule->is_available();
+			if ( $keep ) {
 				$out[] = $id;
 			}
 		}

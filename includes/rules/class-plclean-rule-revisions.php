@@ -123,25 +123,37 @@ class PLCLEAN_Rule_Revisions extends PLCLEAN_Rule {
 	/**
 	 * Delete up to $limit revisions.
 	 *
+	 * Revisions that cannot be deleted (e.g. another plugin blocks it) are stepped over, so they never keep the
+	 * newer ones from being cleaned. A batch deletes nothing only when every remaining revision is blocked.
+	 *
 	 * @param int $limit Maximum revisions to delete.
 	 * @return int Number deleted.
 	 */
 	public function clean_batch( $limit ) {
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$ids = $wpdb->get_col(
-			$wpdb->prepare(
-				"SELECT ID FROM {$wpdb->posts} WHERE post_type = 'revision' AND post_name NOT LIKE %s ORDER BY ID ASC LIMIT %d",
-				$this->autosave_pattern(),
-				$limit
-			)
-		);
-
+		$limit   = (int) $limit;
 		$deleted = 0;
-		foreach ( $ids as $id ) {
-			$result = wp_delete_post_revision( (int) $id );
-			if ( $result && ! is_wp_error( $result ) ) {
-				++$deleted;
+		// shortcut: each batch re-tries blocked revisions from the start; store a cursor if sites block thousands.
+		$after = 0;
+		while ( $deleted < $limit ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$ids = $wpdb->get_col(
+				$wpdb->prepare(
+					"SELECT ID FROM {$wpdb->posts} WHERE post_type = 'revision' AND post_name NOT LIKE %s AND ID > %d ORDER BY ID ASC LIMIT %d",
+					$this->autosave_pattern(),
+					$after,
+					$limit - $deleted
+				)
+			);
+			if ( ! $ids ) {
+				break;
+			}
+			foreach ( $ids as $id ) {
+				$after  = (int) $id;
+				$result = wp_delete_post_revision( $after );
+				if ( $result && ! is_wp_error( $result ) ) {
+					++$deleted;
+				}
 			}
 		}
 		return $deleted;
