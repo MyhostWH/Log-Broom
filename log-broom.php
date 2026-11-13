@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Log Broom
  * Description:       Safely clean up log tables and clutter that plugins leave behind in your WordPress database.
- * Version:           1.0.1
+ * Version:           1.0.2
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            MyHost
@@ -16,7 +16,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'PLCLEAN_VERSION', '1.0.1' );
+define( 'PLCLEAN_VERSION', '1.0.2' );
 define( 'PLCLEAN_FILE', __FILE__ );
 define( 'PLCLEAN_DIR', plugin_dir_path( __FILE__ ) );
 

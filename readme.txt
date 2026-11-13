@@ -4,7 +4,7 @@ Tags: database, cleanup, logs, revisions, transients
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -88,9 +88,14 @@ No. See the Privacy section.
 
 == Privacy ==
 
-Log Broom does not collect, store or send any personal data, makes no external requests, and loads no assets from other servers. It stores only its own settings, the time and number of entries of the last cleaning run, and small internal values used while an automatic cleaning run is in progress (the names of the database tables waiting to be optimized and the running total of entries removed), and the database error message of the last automatic run if it failed, in your site's options table. None of this is personal data, and all of it is removed when you delete the plugin.
+Log Broom does not collect, store or send any personal data, makes no external requests, and loads no assets from other servers. It stores only its own settings, the time and number of entries of the last cleaning run, and small internal values used while an automatic cleaning run is in progress (the names of the database tables waiting to be optimized and the running total of entries removed), and, if the last automatic run hit database errors, the error messages, the sources they came from and the number of retries so far, in your site's options table. None of this is personal data, and all of it is removed when you delete the plugin.
 
 == Changelog ==
+
+= 1.0.2 =
+* Automatic cleaning retries database errors with growing wait times and keeps cleaning the other sources.
+* More accurate size figures after cleaning; clearer message when Optimize is off.
+* Fixed a progress number that could be out of date for one batch.
 
 = 1.0.1 =
 * Safer Solid Security cleaning: keeps the data Solid Security uses for repeat-offender bans and attempt limits (recent lockouts and the last day of attempt counters). Thanks to Yossi Gueta.
@@ -112,6 +117,9 @@ Log Broom does not collect, store or send any personal data, makes no external r
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.0.2 =
+Automatic cleaning keeps cleaning the other sources when one hits a database error and retries it with growing wait times. Also more accurate size figures after cleaning.
 
 = 1.0.1 =
 Safety update: Solid Security and Wordfence cleaning now keep the data their brute-force protection, breached-password check and scans rely on. Also fixes settings saves, "Last run" totals and several admin page issues.

@@ -2,23 +2,23 @@
 # This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Log Broom 1.0.1\n"
+"Project-Id-Version: Log Broom 1.0.2\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/log-broom\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-13T16:59:03+00:00\n"
+"POT-Creation-Date: 2026-11-13T18:09:01+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: log-broom\n"
 
 #. Plugin Name of the plugin
 #: log-broom.php
-#: includes/admin/class-plclean-admin.php:54
 #: includes/admin/class-plclean-admin.php:55
-#: includes/admin/views/page.php:35
+#: includes/admin/class-plclean-admin.php:56
+#: includes/admin/views/page.php:38
 msgid "Log Broom"
 msgstr ""
 
@@ -37,201 +37,225 @@ msgstr ""
 msgid "https://myhost.co.il/"
 msgstr ""
 
-#: includes/admin/class-plclean-admin.php:98
+#: includes/admin/class-plclean-admin.php:99
 msgid "Only a network administrator can clean network-wide logs."
 msgstr ""
 
-#: includes/admin/class-plclean-admin.php:278
-msgid "You do not have permission to access this page."
+#. translators: %s: error message from the database.
+#: includes/admin/class-plclean-admin.php:270
+#, php-format
+msgid "Last automatic run failed: %s. It will retry automatically."
+msgstr ""
+
+#. translators: 1: date, 2: number of entries removed.
+#: includes/admin/class-plclean-admin.php:276
+#, php-format
+msgid "Last automatic run: %1$s, removed %2$s entry."
+msgid_plural "Last automatic run: %1$s, removed %2$s entries."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: source name, 2: error message from the database.
+#: includes/admin/class-plclean-admin.php:285
+#, php-format
+msgid "%1$s: database error: %2$s."
 msgstr ""
 
 #: includes/admin/class-plclean-admin.php:292
+msgid "It will retry automatically."
+msgstr ""
+
+#. translators: %s: date and time of the next try.
+#: includes/admin/class-plclean-admin.php:295
+#, php-format
+msgid "It will retry at %s."
+msgstr ""
+
+#: includes/admin/class-plclean-admin.php:307
+msgid "You do not have permission to access this page."
+msgstr ""
+
+#: includes/admin/class-plclean-admin.php:321
 msgid "You do not have permission to do this."
 msgstr ""
 
-#: includes/admin/class-plclean-admin.php:309
+#: includes/admin/class-plclean-admin.php:338
 msgid "Unknown source."
 msgstr ""
 
-#: includes/admin/class-plclean-admin.php:318
+#: includes/admin/class-plclean-admin.php:347
 msgid "This source was not found on this site."
 msgstr ""
 
-#: includes/admin/class-plclean-admin.php:360
+#: includes/admin/class-plclean-admin.php:389
 msgid "Please confirm you have a database backup before cleaning."
 msgstr ""
 
 #. translators: %s: error message from the database.
-#: includes/admin/class-plclean-admin.php:373
+#: includes/admin/class-plclean-admin.php:402
 #, php-format
 msgid "The database refused to delete entries: %s"
 msgstr ""
 
-#: includes/admin/class-plclean-admin.php:441
+#: includes/admin/class-plclean-admin.php:540
 msgid "Please confirm you have regular automatic backups before turning on automatic cleaning."
 msgstr ""
 
-#: includes/admin/views/page.php:40
+#: includes/admin/views/page.php:43
 msgid "Back up your database first."
 msgstr ""
 
-#: includes/admin/views/page.php:41
+#: includes/admin/views/page.php:44
 msgid "Cleaning permanently deletes data and can't be undone."
 msgstr ""
 
-#: includes/admin/views/page.php:43
+#: includes/admin/views/page.php:46
 msgid "How to back up WordPress"
 msgstr ""
 
-#: includes/admin/views/page.php:44
+#: includes/admin/views/page.php:47
 msgid "(opens in a new tab)"
 msgstr ""
 
-#: includes/admin/views/page.php:56
+#: includes/admin/views/page.php:59
 #: assets/js/admin.js:474
 msgid "Log data"
 msgstr ""
 
-#: includes/admin/views/page.php:59
-#: includes/admin/views/page.php:85
+#: includes/admin/views/page.php:62
+#: includes/admin/views/page.php:88
 #: assets/js/admin.js:567
 msgid "Counting…"
 msgstr ""
 
 #. translators: %s: number of sources.
-#: includes/admin/views/page.php:64
+#: includes/admin/views/page.php:67
 #, php-format
 msgid "%s source"
 msgid_plural "%s sources"
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/admin/views/page.php:67
+#: includes/admin/views/page.php:70
 msgid "JavaScript is needed to see how much each source holds and to clean it."
 msgstr ""
 
-#: includes/admin/views/page.php:71
-#: assets/js/admin.js:1074
+#: includes/admin/views/page.php:74
+#: assets/js/admin.js:1077
 msgid "Sources"
 msgstr ""
 
-#: includes/admin/views/page.php:87
+#: includes/admin/views/page.php:90
 msgid "Nothing to clean"
 msgstr ""
 
-#: includes/admin/views/page.php:94
+#: includes/admin/views/page.php:97
 msgid "Include in automatic cleaning"
 msgstr ""
 
-#: includes/admin/views/page.php:98
+#: includes/admin/views/page.php:101
 msgid "Clean…"
 msgstr ""
 
-#: includes/admin/views/page.php:104
-#: assets/js/admin.js:1986
+#: includes/admin/views/page.php:107
+#: assets/js/admin.js:2037
 msgid "Details"
 msgstr ""
 
-#: includes/admin/views/page.php:108
+#: includes/admin/views/page.php:111
 msgid "Database tables"
 msgstr ""
 
-#: includes/admin/views/page.php:114
+#: includes/admin/views/page.php:117
 msgid "Table"
 msgstr ""
 
-#: includes/admin/views/page.php:115
+#: includes/admin/views/page.php:118
 msgid "Size on disk"
 msgstr ""
 
-#: includes/admin/views/page.php:129
+#: includes/admin/views/page.php:132
 msgid "What's deleted"
 msgstr ""
 
-#: includes/admin/views/page.php:140
+#: includes/admin/views/page.php:143
 msgid "What's kept"
 msgstr ""
 
-#: includes/admin/views/page.php:151
+#: includes/admin/views/page.php:154
 msgid "None of the supported plugins were found on this site. Post revisions and expired transients can still be cleaned."
 msgstr ""
 
 #. translators: %s: number of sources.
-#: includes/admin/views/page.php:159
+#: includes/admin/views/page.php:162
 #, php-format
 msgid "Network administrator only (%s)"
 msgstr ""
 
 #. translators: %s: number of sources.
-#: includes/admin/views/page.php:178
+#: includes/admin/views/page.php:181
 #, php-format
 msgid "Not detected on this site (%s)"
 msgstr ""
 
-#: includes/admin/views/page.php:193
+#: includes/admin/views/page.php:196
 msgid "Automatic cleaning"
 msgstr ""
 
-#: includes/admin/views/page.php:197
+#: includes/admin/views/page.php:200
 msgid "Automatic cleaning: Daily"
 msgstr ""
 
-#: includes/admin/views/page.php:199
+#: includes/admin/views/page.php:202
 msgid "Automatic cleaning: Weekly"
 msgstr ""
 
-#: includes/admin/views/page.php:201
+#: includes/admin/views/page.php:204
 msgid "Automatic cleaning: Off"
 msgstr ""
 
-#: includes/admin/views/page.php:206
+#: includes/admin/views/page.php:209
 msgid "Off"
 msgstr ""
 
-#: includes/admin/views/page.php:207
+#: includes/admin/views/page.php:210
 msgid "Daily"
 msgstr ""
 
-#: includes/admin/views/page.php:208
+#: includes/admin/views/page.php:211
 msgid "Weekly"
 msgstr ""
 
-#: includes/admin/views/page.php:209
+#: includes/admin/views/page.php:212
 msgid "Optimize tables"
 msgstr ""
 
-#: includes/admin/views/page.php:212
+#: includes/admin/views/page.php:215
 msgid "Only the sources switched on under \"Include in automatic cleaning\" are cleaned."
 msgstr ""
 
-#: includes/admin/views/page.php:215
+#: includes/admin/views/page.php:218
 msgid "Optimize tables only rebuilds tables where entries were removed. Automatic cleaning never rebuilds WordPress core tables."
 msgstr ""
 
-#: includes/admin/views/page.php:221
-#: assets/js/admin.js:1564
+#: includes/admin/views/page.php:224
+#: assets/js/admin.js:1614
 msgid "Automatic cleaning is on. It runs daily."
 msgstr ""
 
-#: includes/admin/views/page.php:223
-#: assets/js/admin.js:1564
+#: includes/admin/views/page.php:226
+#: assets/js/admin.js:1614
 msgid "Automatic cleaning is on. It runs weekly."
 msgstr ""
 
 #. translators: 1: date, 2: number of entries removed.
-#: includes/admin/views/page.php:227
-#: assets/js/admin.js:1569
+#: includes/admin/views/page.php:230
+#: assets/js/admin.js:1620
 #, php-format,js-format
 msgid "Last run: %1$s, removed %2$s entry."
 msgid_plural "Last run: %1$s, removed %2$s entries."
 msgstr[0] ""
 msgstr[1] ""
-
-#. translators: %s: error message from the database.
-#: includes/admin/views/page.php:237
-#, php-format
-msgid "Last automatic run failed: %s. It will retry automatically."
-msgstr ""
 
 #: includes/admin/views/page.php:244
 msgid "Advanced"
@@ -275,12 +299,12 @@ msgid "Clean selected…"
 msgstr ""
 
 #. translators: %s: number of batches.
-#: includes/class-plclean-cleaner.php:123
+#: includes/class-plclean-cleaner.php:127
 #, php-format
 msgid "Stopped after %s batches in a row that removed nothing. Try again later."
 msgstr ""
 
-#: includes/class-plclean-cleaner.php:227
+#: includes/class-plclean-cleaner.php:231
 msgid "Unknown database error."
 msgstr ""
 
@@ -548,8 +572,8 @@ msgid "Couldn't count"
 msgstr ""
 
 #: assets/js/admin.js:731
-#: assets/js/admin.js:1396
-#: assets/js/admin.js:1533
+#: assets/js/admin.js:1413
+#: assets/js/admin.js:1583
 msgid "Close"
 msgstr ""
 
@@ -613,19 +637,19 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: source name, 2: number of entries removed.
-#: assets/js/admin.js:1051
+#: assets/js/admin.js:1050
 #, js-format
 msgid "%1$s — %2$s removed"
 msgstr ""
 
 #. translators: 1: source name, 2: entries removed so far, 3: total entries for this source.
-#: assets/js/admin.js:1054
+#: assets/js/admin.js:1053
 #, js-format
 msgid "%1$s — %2$s of %3$s"
 msgstr ""
 
 #. translators: %s: source name.
-#: assets/js/admin.js:1057
+#: assets/js/admin.js:1056
 #, js-format
 msgid "%s — some entries couldn't be deleted"
 msgstr ""
@@ -633,21 +657,27 @@ msgstr ""
 #. translators: %s: source name.
 #: assets/js/admin.js:1060
 #, js-format
-msgid "%s — skipped (not available)"
+msgid "%s — skipped after a database error"
 msgstr ""
 
 #. translators: %s: source name.
 #: assets/js/admin.js:1063
 #, js-format
+msgid "%s — skipped (not available)"
+msgstr ""
+
+#. translators: %s: source name.
+#: assets/js/admin.js:1066
+#, js-format
 msgid "%s — waiting"
 msgstr ""
 
-#: assets/js/admin.js:1124
+#: assets/js/admin.js:1127
 msgid "less than a minute left"
 msgstr ""
 
 #. translators: %s: number of minutes.
-#: assets/js/admin.js:1130
+#: assets/js/admin.js:1133
 #, js-format
 msgid "about %s min left"
 msgid_plural "about %s min left"
@@ -655,25 +685,25 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: number of hours, 2: number of minutes.
-#: assets/js/admin.js:1137
+#: assets/js/admin.js:1140
 #, js-format
 msgid "about %1$s h %2$s min left"
 msgid_plural "about %1$s h %2$s min left"
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/js/admin.js:1155
+#: assets/js/admin.js:1158
 msgid "Estimating time left…"
 msgstr ""
 
 #. translators: 1: entries removed per second, 2: time left, e.g. "about 2 min left".
-#: assets/js/admin.js:1167
+#: assets/js/admin.js:1170
 #, js-format
 msgid "≈ %1$s entries/sec · %2$s"
 msgstr ""
 
 #. translators: %s: number of scheduled tasks per batch (their log entries are removed with them).
-#: assets/js/admin.js:1193
+#: assets/js/admin.js:1196
 #, js-format
 msgid "Batch: %s task (fixed)"
 msgid_plural "Batch: %s tasks (fixed)"
@@ -681,7 +711,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of scheduled tasks per batch (their log entries are removed with them).
-#: assets/js/admin.js:1198
+#: assets/js/admin.js:1201
 #, js-format
 msgid "Batch: %s task (automatic)"
 msgid_plural "Batch: %s tasks (automatic)"
@@ -689,7 +719,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of entries per batch.
-#: assets/js/admin.js:1204
+#: assets/js/admin.js:1207
 #, js-format
 msgid "Batch: %s entry (fixed)"
 msgid_plural "Batch: %s entries (fixed)"
@@ -697,7 +727,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of entries per batch.
-#: assets/js/admin.js:1210
+#: assets/js/admin.js:1213
 #, js-format
 msgid "Batch: %s entry (automatic)"
 msgid_plural "Batch: %s entries (automatic)"
@@ -705,70 +735,90 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: entries removed so far, 2: total entries.
-#: assets/js/admin.js:1243
+#: assets/js/admin.js:1246
 #, js-format
 msgid "Cleaning… %1$s of %2$s removed"
 msgstr ""
 
-#: assets/js/admin.js:1252
+#: assets/js/admin.js:1255
 msgid "Cleaning progress"
 msgstr ""
 
-#: assets/js/admin.js:1261
+#: assets/js/admin.js:1264
 msgid "Keep this tab open. Large logs can take a few minutes."
 msgstr ""
 
 #. translators: %s: source name.
-#: assets/js/admin.js:1289
+#: assets/js/admin.js:1292
 #, js-format
 msgid "Now cleaning: %s"
 msgstr ""
 
-#: assets/js/admin.js:1365
+#: assets/js/admin.js:1378
 msgid "Optimizing tables…"
 msgstr ""
 
-#: assets/js/admin.js:1403
+#: assets/js/admin.js:1378
+msgid "Updating table sizes…"
+msgstr ""
+
+#: assets/js/admin.js:1420
 msgid "Anything already removed stays removed."
 msgstr ""
 
-#: assets/js/admin.js:1406
+#: assets/js/admin.js:1423
 msgid "Reload page"
 msgstr ""
 
 #. translators: %s: source name.
-#: assets/js/admin.js:1413
+#: assets/js/admin.js:1430
 #, js-format
 msgid "The server stopped responding while cleaning %s, probably a timeout. Anything already removed stays removed."
 msgstr ""
 
 #. translators: %s: source name.
-#: assets/js/admin.js:1421
+#: assets/js/admin.js:1438
 #, js-format
 msgid "Cleaning %s stopped. Anything already removed stays removed."
 msgstr ""
 
 #. translators: %s: source name.
-#: assets/js/admin.js:1428
+#: assets/js/admin.js:1445
 #, js-format
 msgid "The server sent an unexpected answer while cleaning %s. Anything already removed stays removed."
 msgstr ""
 
-#: assets/js/admin.js:1436
+#: assets/js/admin.js:1453
 msgid "Try a smaller batch size in Advanced settings."
 msgstr ""
 
-#: assets/js/admin.js:1441
+#: assets/js/admin.js:1458
 msgid "Resume cleaning"
 msgstr ""
 
-#: assets/js/admin.js:1449
-#: assets/js/admin.js:1457
+#: assets/js/admin.js:1469
+msgid "Skip this source"
+msgstr ""
+
+#: assets/js/admin.js:1484
+#: assets/js/admin.js:1492
 msgid "Cleaning paused"
 msgstr ""
 
+#: assets/js/admin.js:1506
+msgid "Not cleaned: only a network administrator can clean network-wide logs."
+msgstr ""
+
+#: assets/js/admin.js:1509
+msgid "Skipped: the database refused to delete entries. Try again later."
+msgstr ""
+
+#: assets/js/admin.js:1511
+msgid "Not cleaned: this source is no longer on this site."
+msgstr ""
+
 #. translators: 1: number of entries, 2: data size.
-#: assets/js/admin.js:1478
+#: assets/js/admin.js:1531
 #, js-format
 msgid "Done! Removed %1$s entry and freed about %2$s."
 msgid_plural "Done! Removed %1$s entries and freed about %2$s."
@@ -776,62 +826,54 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of entries.
-#: assets/js/admin.js:1484
+#: assets/js/admin.js:1537
 #, js-format
 msgid "Done! Removed %s entry."
 msgid_plural "Done! Removed %s entries."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/js/admin.js:1500
-msgid "Not cleaned: only a network administrator can clean network-wide logs."
-msgstr ""
-
-#: assets/js/admin.js:1501
-msgid "Not cleaned: this source is no longer on this site."
-msgstr ""
-
-#: assets/js/admin.js:1518
+#: assets/js/admin.js:1567
 msgid "Some entries couldn't be deleted. Try again later."
 msgstr ""
 
-#: assets/js/admin.js:1529
-msgid "Tip: turn on 'Optimize tables' to give the freed space back to your server."
+#: assets/js/admin.js:1574
+msgid "The database reuses this space for new data; turn on “Optimize tables” to return it to the disk."
 msgstr ""
 
-#: assets/js/admin.js:1657
+#: assets/js/admin.js:1708
 msgid "Saved"
 msgstr ""
 
-#: assets/js/admin.js:1662
-#: assets/js/admin.js:1905
+#: assets/js/admin.js:1713
+#: assets/js/admin.js:1956
 msgid "Could not save. Please try again."
 msgstr ""
 
-#: assets/js/admin.js:1854
+#: assets/js/admin.js:1905
 msgid "Turn on automatic cleaning"
 msgstr ""
 
-#: assets/js/admin.js:1855
+#: assets/js/admin.js:1906
 msgid "Cancel"
 msgstr ""
 
-#: assets/js/admin.js:1867
+#: assets/js/admin.js:1918
 msgid "Turn on automatic cleaning?"
 msgstr ""
 
-#: assets/js/admin.js:1874
+#: assets/js/admin.js:1925
 msgid "Every day, the sources you include are cleaned without asking again."
 msgstr ""
 
-#: assets/js/admin.js:1875
+#: assets/js/admin.js:1926
 msgid "Every week, the sources you include are cleaned without asking again."
 msgstr ""
 
-#: assets/js/admin.js:1878
+#: assets/js/admin.js:1929
 msgid "I have regular automatic backups of my database."
 msgstr ""
 
-#: assets/js/admin.js:1986
+#: assets/js/admin.js:2037
 msgid "Hide details"
 msgstr ""

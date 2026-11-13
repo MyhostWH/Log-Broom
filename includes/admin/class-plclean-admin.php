@@ -462,8 +462,8 @@ class PLCLEAN_Admin {
 	 * `tables_touched`). Only names that are exactly one of the rule's own tables() are optimized, so the
 	 * request can never name another table.
 	 *
-	 * The space freed is measured: the tables are analyzed and their size read before optimizing, and read again
-	 * after. The answer has the rule's sizes (as plclean_stats) plus 'freed' (bytes, never negative).
+	 * The space freed is measured: the tables are analyzed (see PLCLEAN_Cleaner::analyze_tables() for the ones that
+	 * are not) and their size read before optimizing, and read again after. The answer has the rule's sizes (as plclean_stats) plus 'freed' (bytes, never negative).
 	 *
 	 * @return void
 	 */
@@ -471,8 +471,9 @@ class PLCLEAN_Admin {
 		$this->guard();
 		$rule    = $this->posted_rule();
 		$cleaner = new PLCLEAN_Cleaner();
-		$tables  = $cleaner->analyze_tables( $rule, $this->posted_tables() );
-		$before  = self::tables_size( $tables );
+		$tables  = PLCLEAN_Cleaner::own_tables( $rule, $this->posted_tables() );
+		$cleaner->analyze_tables( $rule, $tables );
+		$before = self::tables_size( $tables );
 		$cleaner->optimize_tables( $rule, $tables );
 		$out          = self::sizes( $rule );
 		$out['freed'] = max( 0, $before - self::tables_size( $tables ) );

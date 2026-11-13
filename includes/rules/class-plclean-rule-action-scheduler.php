@@ -96,12 +96,22 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 	/** Transient that holds where the scans are, so the next request (AJAX or cron) carries on from there. */
 	const SCAN_STATE = 'plclean_as_scan';
 
+	/** Seconds a count saved in the scan state may be reused by a batch that deleted nothing. */
+	const COUNT_REUSE_SECONDS = 60;
+
 	/**
 	 * Real names of the tables the last clean_batch() call deleted rows from.
 	 *
 	 * @var string[]
 	 */
 	private $as_touched = array();
+
+	/**
+	 * Rows the last clean_batch() call deleted.
+	 *
+	 * @var int
+	 */
+	private $last_deleted = 0;
 
 	/**
 	 * Whether the last clean_batch() call moved a scan forward (more of the tables are still to be read).
@@ -209,6 +219,9 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 			'pass_deleted' => 0,
 			'empty_passes' => 0,
 			'from_top'     => true,
+			'remaining'    => null,
+			'parts'        => null,
+			'counted_at'   => 0,
 		);
 		if ( ! is_array( $state ) ) {
 			return $defaults;
@@ -222,6 +235,12 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 		$state['log']          = absint( $state['log'] );
 		$state['pass_deleted'] = absint( $state['pass_deleted'] );
 		$state['empty_passes'] = absint( $state['empty_passes'] );
+		$state['remaining']    = null === $state['remaining'] ? null : absint( $state['remaining'] );
+		$state['parts']        = is_array( $state['parts'] ) && isset( $state['parts']['tasks'], $state['parts']['logs'] ) ? array(
+			'tasks' => absint( $state['parts']['tasks'] ),
+			'logs'  => absint( $state['parts']['logs'] ),
+		) : null;
+		$state['counted_at']   = absint( $state['counted_at'] );
 		return $state;
 	}
 
@@ -294,17 +313,25 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 	}
 
 	/**
-	 * Remaining entries after a batch: always the real count (count_parts(), one cheap statement), also after a batch
-	 * that deleted nothing. A count saved by an earlier run (the scan state lives for an hour) is never shown, and
-	 * "nothing left" (which ends a run) always comes from a real count.
+	 * Remaining entries after a batch. A batch that only moved a scan forward (it deleted nothing) reuses the count
+	 * saved in the scan state if that count was made less than COUNT_REUSE_SECONDS ago (so within the same run) and
+	 * was above 0; any other batch counts (count_parts(), one statement). A count saved by an earlier run is never
+	 * shown, and "nothing left" (which ends a run) always comes from a real count.
 	 *
 	 * @return int
 	 */
 	public function remaining_after_batch() {
-		$parts     = $this->count_parts();
-		$remaining = $parts['tasks'] + $parts['logs'];
-		if ( 0 === $remaining ) {
-			$state = $this->scan_state();
+		$state = $this->scan_state();
+		$fresh = $state['counted_at'] > 0 && time() - $state['counted_at'] < self::COUNT_REUSE_SECONDS;
+		if ( 0 === $this->last_deleted && $this->progressed && ! $this->pass_end && $fresh && $state['remaining'] > 0 && null !== $state['parts'] ) {
+			$this->last_parts = $state['parts'];
+			return $state['remaining'];
+		}
+		$parts               = $this->count_parts();
+		$state['remaining']  = $parts['tasks'] + $parts['logs'];
+		$state['parts']      = $parts;
+		$state['counted_at'] = time();
+		if ( 0 === $state['remaining'] ) {
 			// Nothing is left: the next run starts a new pass at the top.
 			$state['phase']        = 'actions';
 			$state['action']       = 0;
@@ -312,9 +339,9 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 			$state['pass_deleted'] = 0;
 			$state['empty_passes'] = 0;
 			$state['from_top']     = true;
-			$this->save_scan_state( $state );
 		}
-		return $remaining;
+		$this->save_scan_state( $state );
+		return $state['remaining'];
 	}
 
 	/**
@@ -342,6 +369,7 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 	public function clean_batch( $limit ) {
 		$limit                  = max( 1, (int) $limit );
 		$this->as_touched       = array();
+		$this->last_deleted     = 0;
 		$this->progressed       = false;
 		$this->pass_end         = false;
 		list( $actions, $logs ) = $this->as_tables();
@@ -355,6 +383,7 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 			$n = PLCLEAN_DB::delete_batch( $table, null === $actions ? '' : self::DELETABLE, $limit );
 			if ( $n > 0 ) {
 				$this->as_touched[] = $table;
+				$this->last_deleted = (int) $n;
 			}
 			return $n;
 		}
@@ -377,6 +406,7 @@ class PLCLEAN_Rule_Action_Scheduler extends PLCLEAN_Rule_Table {
 			// The rows deleted before the error stay deleted; the scan position is kept for the retry.
 			return false;
 		}
+		$this->last_deleted     = $deleted;
 		$state['pass_deleted'] += $deleted;
 
 		if ( $this->pass_end ) {

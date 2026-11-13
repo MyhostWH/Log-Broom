@@ -1371,6 +1371,10 @@
 			if ( ! run.touched[ id ].length ) {
 				continue;
 			}
+			if ( ! run.optimize && sources[ id ].core ) {
+				// Shared WordPress tables show no size: nothing to refresh.
+				continue;
+			}
 			renderProgress( run, run.optimize ? __( 'Optimizing tables…', 'log-broom' ) : __( 'Updating table sizes…', 'log-broom' ) );
 			try {
 				const result = await post( run.optimize ? 'plclean_optimize' : 'plclean_analyze', { rule: id, tables: run.touched[ id ] } );
@@ -1460,7 +1464,8 @@
 
 		const footer = [ $close ];
 		if ( 'message' === kind && run.failures[ id ] >= 2 ) {
-			// The same source failed again after Resume: let the others be cleaned.
+			// Offered from the first failed Resume (the second database error in a row for this source), so the other
+			// sources can still be cleaned.
 			const $skip = $( '<button type="button" class="button plclean-skip"></button>' ).text( __( 'Skip this source', 'log-broom' ) );
 			$skip.attr( 'aria-describedby', 'plclean-title-' + id );
 			$skip.on( 'click', () => {

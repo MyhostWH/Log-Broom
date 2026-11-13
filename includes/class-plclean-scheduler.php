@@ -174,8 +174,9 @@ class PLCLEAN_Scheduler {
 	 *
 	 * A rule that hits a database error is set aside for the rest of the run (RUN_ERRORS_OPTION) and the other rules
 	 * are still cleaned. The run completes when every rule is done or failed: the last-run record gets the total of
-	 * all its parts. If rules failed, they are stored (LAST_ERROR_OPTION) with the number of failed runs in a row, and
-	 * only they are retried, after retry_delay(). A run that completes without errors clears them.
+	 * all its parts (a retry adds its total to the run it retries). If rules failed, they are stored
+	 * (LAST_ERROR_OPTION) with the number of failed runs in a row of the same sources, and only they are retried,
+	 * after retry_delay(). A run that completes without errors clears them.
 	 *
 	 * @return void
 	 */
@@ -216,6 +217,12 @@ class PLCLEAN_Scheduler {
 			return;
 		}
 
+		if ( is_array( $scope ) ) {
+			// A retry is part of the same error episode: add to the run it retries, so a retry (failing or not) never
+			// replaces that run's total with its own, smaller one.
+			$previous = PLCLEAN_Settings::get_last_run();
+			$total   += $previous ? (int) $previous['deleted'] : 0;
+		}
 		PLCLEAN_Settings::set_last_run( time(), $total );
 		delete_option( self::RUN_DELETED_OPTION );
 		delete_option( self::RUN_ERRORS_OPTION );
@@ -226,8 +233,11 @@ class PLCLEAN_Scheduler {
 			return;
 		}
 
+		// The back-off continues only while a source that failed last time fails again; a source failing for the first
+		// time starts at the shortest wait.
 		$last     = self::get_last_error();
-		$attempts = ( $last ? $last['attempts'] : 0 ) + 1;
+		$again    = $last && array() !== array_intersect_key( $errors, $last['rules'] );
+		$attempts = $again ? $last['attempts'] + 1 : 1;
 		update_option(
 			self::LAST_ERROR_OPTION,
 			array(

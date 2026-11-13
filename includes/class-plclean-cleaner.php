@@ -409,17 +409,41 @@ class PLCLEAN_Cleaner {
 	}
 
 	/**
+	 * Largest table (data plus indexes, in bytes) that analyze_tables() refreshes.
+	 *
+	 * InnoDB's own ANALYZE only samples a few index pages (milliseconds even on a 1.4 GB table). But MariaDB with
+	 * use_stat_tables=PREFERABLY (or COMPLEMENTARY) also collects engine-independent statistics, which reads the
+	 * whole table, and MySQL before 8.0.24 flushes the table after ANALYZE, which can stall other queries waiting on
+	 * it. Bigger tables are therefore left alone; their sizes are then the server's own estimate.
+	 */
+	const ANALYZE_MAX_BYTES = 1073741824;
+
+	/**
 	 * Refresh the statistics of some of a rule's tables (ANALYZE TABLE), once each, so the sizes read afterwards are
-	 * current. Only names that are exactly one of the rule's own tables() are analyzed.
+	 * current. Only names that are exactly one of the rule's own tables() are analyzed. Core rules are skipped (their
+	 * shared WordPress tables show no size), and so are tables over the size limit (see ANALYZE_MAX_BYTES).
 	 *
 	 * @param PLCLEAN_Rule $rule   Rule.
 	 * @param array        $tables Wanted table names (the tables a clean deleted from).
 	 * @return string[] The tables analyzed.
 	 */
 	public function analyze_tables( PLCLEAN_Rule $rule, array $tables ) {
-		$done = self::own_tables( $rule, $tables );
-		foreach ( $done as $table ) {
+		if ( $rule->is_core() ) {
+			return array();
+		}
+		/**
+		 * Filters the largest table size (data plus indexes, bytes) that is analyzed after a manual clean.
+		 *
+		 * @param int $bytes Default 1 GB.
+		 */
+		$max  = (int) apply_filters( 'plclean_analyze_max_bytes', self::ANALYZE_MAX_BYTES );
+		$done = array();
+		foreach ( self::own_tables( $rule, $tables ) as $table ) {
+			if ( PLCLEAN_DB::table_size( $table ) > $max ) {
+				continue;
+			}
 			PLCLEAN_DB::analyze( $table );
+			$done[] = $table;
 		}
 		return $done;
 	}
